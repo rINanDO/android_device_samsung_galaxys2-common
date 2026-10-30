@@ -169,7 +169,7 @@ WIFI_DRIVER_FW_PATH_P2P     := "/system/vendor/etc/wifi/bcmdhd_p2p.bin"
 WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
 
 # Network Routing
-TARGET_NEEDS_NETD_DIRECT_CONNECT_RULE := true
+$(call soong_config_set,netd,direct_connect_rule,true)
 
 # Bluetooth
 BOARD_HAVE_BLUETOOTH := true
