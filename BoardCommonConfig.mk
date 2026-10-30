@@ -148,6 +148,8 @@ USE_XML_AUDIO_POLICY_CONF := 1
 BOARD_PROVIDES_LIBRIL := true
 BOARD_MODEM_TYPE := xmm6260
 BOARD_RIL_CLASS := ../../../device/samsung/galaxys2-common/ril
+$(call soong_config_set,ril,samsung_libril,true)
+$(call soong_config_set,ril,samsung_modem_type,$(BOARD_MODEM_TYPE))
 
 # Camera
 BOARD_CAMERA_HAVE_ISO := true
