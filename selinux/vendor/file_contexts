@@ -112,7 +112,6 @@
 /data/vendor/display(/.*)?    u:object_r:display_vendor_data_file:s0
 
 # Lineage Trust HAL
-/system/vendor/bin/hw/vendor\.lineage\.trust@1\.0-service                    u:object_r:hal_trust_default_exec:s0
 
 # Lineage touch HAL
 /(vendor|system/vendor)/bin/hw/vendor\.lineage\.touch-service\.samsung               u:object_r:hal_lineage_touch_default_exec:s0

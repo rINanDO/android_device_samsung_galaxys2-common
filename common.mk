@@ -151,10 +151,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.charger.enable_suspend=true
 
-# Trust HAL
-PRODUCT_PACKAGES += \
-    vendor.lineage.trust@1.0-service
-
 # Use legacy ADB USB support
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.adb.nonblocking_ffs=false
