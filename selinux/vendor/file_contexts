@@ -115,7 +115,7 @@
 /system/vendor/bin/hw/vendor\.lineage\.trust@1\.0-service                    u:object_r:hal_trust_default_exec:s0
 
 # Lineage touch HAL
-/(vendor|system/vendor)/bin/hw/vendor\.lineage\.touch\@[0-9]\.[0-9]-service.samsung               u:object_r:hal_lineage_touch_default_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.lineage\.touch-service\.samsung               u:object_r:hal_lineage_touch_default_exec:s0
 
 # GPS
 /(vendor|system/vendor)/bin/hw/android\.hardware\.gnss@[0-9]\.[0-9]-service\.exynos4    u:object_r:hal_gnss_default_exec:s0
