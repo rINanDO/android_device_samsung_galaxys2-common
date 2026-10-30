@@ -108,7 +108,8 @@
 /sys/power/state						u:object_r:sysfs_power:s0
 
 # LiveDisplay HAL
-/(vendor|system/vendor)/bin/hw/vendor\.lineage\.livedisplay@[0-9]\.[0-9]-service\.samsung-exynos    u:object_r:hal_lineage_livedisplay_exynos_exec:s0
+/(vendor|system/vendor)/bin/hw/vendor\.lineage\.livedisplay-service\.samsung-exynos    u:object_r:hal_lineage_livedisplay_exynos_exec:s0
+/data/vendor/display(/.*)?    u:object_r:display_vendor_data_file:s0
 
 # Lineage Trust HAL
 /system/vendor/bin/hw/vendor\.lineage\.trust@1\.0-service                    u:object_r:hal_trust_default_exec:s0

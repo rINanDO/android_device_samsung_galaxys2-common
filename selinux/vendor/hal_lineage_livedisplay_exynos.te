@@ -7,8 +7,12 @@ init_daemon_domain(hal_lineage_livedisplay_exynos)
 # Allow LiveDisplay HAL's default implementation to use vendor-binder service
 vndbinder_use(hal_lineage_livedisplay_exynos)
 
-# Allow LiveDisplay to store files under /data/vendor/display and access them
+binder_call(hal_lineage_livedisplay_exynos, servicemanager)
+
+# Allow LiveDisplay to access the mDNIe nodes
 allow hal_lineage_livedisplay_exynos sysfs_display:dir search;
 allow hal_lineage_livedisplay_exynos sysfs_display:file { getattr open read write };
-allow hal_lineage_livedisplay_exynos vendor_data_file:dir search;
-allow hal_lineage_livedisplay_exynos vendor_data_file:file { getattr open read write };
+
+# Allow LiveDisplay to store files under /data/vendor/display and access them
+allow hal_lineage_livedisplay_exynos display_vendor_data_file:dir rw_dir_perms;
+allow hal_lineage_livedisplay_exynos display_vendor_data_file:file create_file_perms;

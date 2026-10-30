@@ -53,20 +53,11 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl">
+    <hal format="aidl">
         <name>vendor.lineage.livedisplay</name>
-        <transport>hwbinder</transport>
-        <version>2.0</version>
+        <version>1</version>
         <interface>
-            <name>ISunlightEnhancement</name>
-            <instance>default</instance>
-        </interface>
-        <interface>
-            <name>IColor</name>
-            <instance>default</instance>
-        </interface>
-        <interface>
-            <name>IDisplayModes</name>
+            <name>IAdaptiveBacklight</name>
             <instance>default</instance>
         </interface>
         <interface>
@@ -74,11 +65,15 @@
             <instance>default</instance>
         </interface>
         <interface>
-            <name>IAdaptiveBacklight</name>
+            <name>IDisplayModes</name>
             <instance>default</instance>
         </interface>
         <interface>
             <name>IReadingEnhancement</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>ISunlightEnhancement</name>
             <instance>default</instance>
         </interface>
     </hal>
