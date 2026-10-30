@@ -174,7 +174,8 @@ $(call soong_config_set,netd,direct_connect_rule,true)
 # Bluetooth
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
-BOARD_CUSTOM_BT_CONFIG := device/samsung/galaxys2-common/bluetooth/vnd_smdk4210.txt
+PRODUCT_SOONG_NAMESPACES += hardware/broadcom/libbt
+$(call soong_config_set,brcm_libbt,custom_bt_config,//$(DEVICE_PATH)/bluetooth:vnd_smdk4210.txt)
 
 # Selinux
 SELINUX_IGNORE_NEVERALLOWS := true
