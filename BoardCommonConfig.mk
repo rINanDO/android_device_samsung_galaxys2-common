@@ -108,7 +108,7 @@ BOARD_ROOT_EXTRA_FOLDERS := efs misc
 BOARD_ROOT_EXTRA_SYMLINKS := /data/tombstones:/tombstones
 
 # Releasetools
-TARGET_RELEASETOOLS_EXTENSIONS := ./device/samsung/galaxys2-common
+TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)
 
 # Hardware tunables
 BOARD_HARDWARE_CLASS := hardware/samsung/lineagehw \
