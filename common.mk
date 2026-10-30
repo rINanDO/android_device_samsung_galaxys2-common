@@ -124,9 +124,10 @@ PRODUCT_PACKAGES += \
     libsecril-shim \
     libcutils-s2-shim
 
-# VNDK
+# VNDK: libsec-ril.so is patched to load libcutils-v29.so for the
+# record_stream functions, which the platform libcutils no longer has.
 PRODUCT_COPY_FILES += \
-    prebuilts/vndk/v29/arm/arch-arm-armv7-a-neon/shared/vndk-sp/libcutils.so:$(TARGET_COPY_OUT_VENDOR)/lib/libcutils-v29.so
+    prebuilts/vndk/v34/arm/arch-arm-armv7-a-neon/shared/vndk-sp/libcutils.so:$(TARGET_COPY_OUT_VENDOR)/lib/libcutils-v29.so
 
 # Legacy GPS
 PRODUCT_PACKAGES += \
