@@ -71,9 +71,11 @@ DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
 TARGET_VENDOR_PROP += $(COMMON_PATH)/vendor.prop
 
 # Bionic
-TARGET_LD_SHIM_LIBS := \
+# The linker splits the entries on ':', so keep them on one line
+SHIM_LIBS := \
     /system/vendor/lib/libsec-ril.so|libcutils-s2-shim.so \
     /system/vendor/lib/hw/gps.exynos4.vendor.so|libcutils-s2-shim.so
+$(call soong_config_set,bionic,ld_shim_libs,"$(subst $(space),:,$(strip $(SHIM_LIBS)))")
 
 TARGET_PROCESS_SDK_VERSION_OVERRIDE := \
     /vendor/bin/hw/rild=22 \
