@@ -295,10 +295,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     config.disable_atlas=true
 
-# Filesystem management tools
-PRODUCT_PACKAGES += \
-    resize2fs_static
-
 # F2FS Filesystem
 PRODUCT_PACKAGES += \
     fsck.f2fs
