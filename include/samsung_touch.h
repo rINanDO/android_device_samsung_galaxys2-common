@@ -34,6 +34,6 @@
 #define KEY_DISABLER_NODE "/sys/class/sec/sec_touchkey/touchkey_enabled"
 
 //For TouchscreenGesture
-#define TOUCHSCREEN_GESTURE_NODE "NOT_SUPPORTED"
+#define EPEN_GESTURE_NODE "NOT_SUPPORTED"
 
 #endif  // SAMSUNG_TOUCH_H
