@@ -1,0 +1,3 @@
+# Linux 3.0 does not apply genfscon labels to sysfs, so the loop device
+# queue attributes stay sysfs instead of sysfs_loop.
+allow apexd sysfs:file w_file_perms;
