@@ -60,6 +60,10 @@
 /sys/devices/platform/samsung-pd.2/mdnie/mdnie(/.*)?             u:object_r:sysfs_display:s0
 /sys/devices/platform/samsung-pd.2/s3cfb.0(/.*)?                 u:object_r:sysfs_display:s0
 
+# ODM configs on the system partition. The platform only labels
+# /vendor/odm/etc, not /system/vendor/odm/etc
+/system/vendor/odm/etc(/.*)?                                     u:object_r:vendor_configs_file:s0
+
 # Executables
 /(vendor|system/vendor)/bin/macloader                                            u:object_r:macloader_exec:s0
 /(vendor|system/vendor)/bin/cbd                                                  u:object_r:cpboot-daemon_exec:s0
