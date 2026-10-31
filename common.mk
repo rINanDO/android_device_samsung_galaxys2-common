@@ -382,6 +382,10 @@ $(call inherit-product, build/make/target/product/go_defaults.mk)
 # Apply Dalvik config for 1G phone
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 
+# Linux 3.0 has no userfaultfd, so ART falls back to the CC collector.
+# Compile the boot image for it, with read barriers
+PRODUCT_ENABLE_UFFD_GC := false
+
 # Enable ADB debugging at boot
 ifeq ($(WITH_ADB_DEBUG_AT_BOOT),true)
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
