@@ -4,7 +4,7 @@
 /dev/fimg2d                                                      u:object_r:gpu_device:s0
 # Dependencies of /system/lib/libMali.so, loaded by every GLES client
 /(vendor|system/vendor)/lib/libC\.so                             u:object_r:same_process_hal_file:s0
-/(vendor|system/vendor)/lib/hw/libUMP\.so                        u:object_r:same_process_hal_file:s0
+/(vendor|system/vendor)/lib/libUMP\.so                           u:object_r:same_process_hal_file:s0
 
 # RIL
 /dev/link_pm                                                     u:object_r:radio_device:s0
