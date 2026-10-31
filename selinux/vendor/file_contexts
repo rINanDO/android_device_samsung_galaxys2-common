@@ -2,9 +2,10 @@
 /dev/mali                                                        u:object_r:gpu_device:s0
 /dev/ump                                                         u:object_r:gpu_device:s0
 /dev/fimg2d                                                      u:object_r:gpu_device:s0
-# Dependencies of /system/lib/libMali.so, loaded by every GLES client
-/(vendor|system/vendor)/lib/libC\.so                             u:object_r:same_process_hal_file:s0
-/(vendor|system/vendor)/lib/libUMP\.so                           u:object_r:same_process_hal_file:s0
+# Without Treble, framework processes load the vendor libraries in-process:
+# libMali needs libC and libUMP, surfaceflinger uses the passthrough
+# composer, and the linker shims reference libsec-ril and the GPS HAL
+/(vendor|system/vendor)/lib(/.*)?                                u:object_r:same_process_hal_file:s0
 
 # RIL
 /dev/link_pm                                                     u:object_r:radio_device:s0
