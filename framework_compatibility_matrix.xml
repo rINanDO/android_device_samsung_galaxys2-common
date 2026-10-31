@@ -1,0 +1,18 @@
+<compatibility-matrix version="1.0" type="framework">
+    <hal format="hidl" optional="true">
+        <name>android.hardware.power</name>
+        <version>1.0</version>
+        <interface>
+            <name>IPower</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>android.hardware.radio.deprecated</name>
+        <version>1.0</version>
+        <interface>
+            <name>IOemHook</name>
+            <regex-instance>slot[0-9]+</regex-instance>
+        </interface>
+    </hal>
+</compatibility-matrix>

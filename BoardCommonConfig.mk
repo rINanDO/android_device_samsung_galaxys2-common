@@ -65,6 +65,7 @@ TARGET_KERNEL_CLANG_COMPILE := false
 
 # Manifest
 DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += $(DEVICE_PATH)/framework_compatibility_matrix.xml
 
 # Properties
 TARGET_VENDOR_PROP += $(COMMON_PATH)/vendor.prop

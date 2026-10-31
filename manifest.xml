@@ -1,4 +1,4 @@
-<manifest version="1.0" type="device">
+<manifest version="1.0" type="device" target-level="5">
     <hal format="hidl">
         <name>android.hardware.audio</name>
         <transport>hwbinder</transport>
@@ -65,15 +65,6 @@
         </interface>
         <interface>
             <name>ISunlightEnhancement</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.configstore</name>
-        <transport>hwbinder</transport>
-        <version>1.1</version>
-        <interface>
-            <name>ISurfaceFlingerConfigs</name>
             <instance>default</instance>
         </interface>
     </hal>
@@ -161,15 +152,6 @@
         <name>android.hardware.bluetooth.audio</name>
         <transport>hwbinder</transport>
         <fqname>@2.0::IBluetoothAudioProvidersFactory/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.frameworks.cameraservice.service</name>
-        <transport>hwbinder</transport>
-        <version>2.1</version>
-        <interface>
-            <name>ICameraService</name>
-            <instance>default</instance>
-        </interface>
     </hal>
     <hal format="hidl">
         <name>android.hardware.radio</name>
