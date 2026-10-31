@@ -31,4 +31,3 @@ allow init self:netlink_socket { bind create getattr read setopt write };
 allow init hal_wifi_hwservice:hwservice_manager { add find };
 allow init hidl_base_hwservice:hwservice_manager add;
 allow init sysfs_devices_system_cpu:file write;
-domain_trans(init, rootfs, cpboot-daemon)

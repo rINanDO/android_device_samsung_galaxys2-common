@@ -62,6 +62,7 @@
 
 # Executables
 /(vendor|system/vendor)/bin/macloader                                            u:object_r:macloader_exec:s0
+/(vendor|system/vendor)/bin/cbd                                                  u:object_r:cpboot-daemon_exec:s0
 
 # Vendor
 /(vendor|system/vendor)/bin/hw/android\.hardware\.power@1\.0-service\.exynos4210     u:object_r:hal_power_default_exec:s0
@@ -127,8 +128,6 @@
 
 # Wifi
 /(vendor|system/vendor)/bin/hw/android\.hardware\.wifi@1\.0-service-lazy\.legacy       u:object_r:hal_wifi_default_exec:s0
-
-/system/bin/clean_scratch_files                         u:object_r:clean_scratch_files_exec:s0
 
 # Light
 /(vendor|system/vendor)/bin/hw/android\.hardware\.light-service\.samsung       u:object_r:hal_light_default_exec:s0

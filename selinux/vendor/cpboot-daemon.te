@@ -1,4 +1,6 @@
 type cpboot-daemon, domain;
+type cpboot-daemon_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(cpboot-daemon)
 
 allow cpboot-daemon cgroup:dir { create add_name };
 allow cpboot-daemon cgroup:file read;
@@ -20,4 +22,3 @@ allow cpboot-daemon proc_cmdline:file { open read };
 allow cpboot-daemon block_device:dir search;
 allow cpboot-daemon device:chr_file { open read write };
 allow cpboot-daemon self:capability mknod;
-allow cpboot-daemon vendor_file:file entrypoint;
