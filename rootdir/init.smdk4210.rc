@@ -343,6 +343,13 @@ on post-fs-data
 on early-init
     write /proc/sys/kernel/magisk_workaround 1
 
+    # There is no metadata partition, but aconfigd needs a writable
+    # /metadata; without it the flag storage is never created and
+    # system_server crashes at boot. Use a tmpfs, the flag storage is
+    # regenerated every boot anyway.
+    mount tmpfs tmpfs /metadata nosuid nodev noexec mode=0755
+    restorecon /metadata
+
 on property:sys.boot_completed=1
     write /proc/sys/kernel/magisk_workaround 0
 
