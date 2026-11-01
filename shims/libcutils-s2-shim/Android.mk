@@ -19,7 +19,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := shims.cpp
 LOCAL_MODULE := libcutils-s2-shim
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
-LOCAL_SHARED_LIBRARIES := libcutils libbinder libprocessgroup
+LOCAL_SHARED_LIBRARIES := libcutils libbinder libprocessgroup libutils
 LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
