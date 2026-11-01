@@ -23,7 +23,7 @@
 /dev/block/mmcblk0p8                                             u:object_r:efs_block_device:s0
 /dev/block/mmcblk0p9                                             u:object_r:system_block_device:s0
 /dev/block/mmcblk0p10                                            u:object_r:userdata_block_device:s0
-/dev/block/mmcblk0p12                                            u:object_r:preload_block_device:s0
+/dev/block/mmcblk0p12                                            u:object_r:misc_block_device:s0
 /dev/block/zram0                                                 u:object_r:swap_block_device:s0
 /efs                                                             u:object_r:efs_device_file:s0
 /misc                                                            u:object_r:misc_device_file:s0
