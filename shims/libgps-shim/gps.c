@@ -613,7 +613,7 @@ static int open_gps(const struct hw_module_t* module, char const* name,
 	}
 	ALOGD("Successfully loaded real GPS hal, shimming get_gps_interface...");
 	// now, we shim hw_device_t
-	vendor_get_gps_interface = (GpsInterface*(*)(struct gps_device_t *)) &(*gps)->get_gps_interface;
+	vendor_get_gps_interface = (GpsInterface*(*)(struct gps_device_t *)) (*gps)->get_gps_interface;
 	(*gps)->get_gps_interface = &shim_get_gps_interface;
 
 	return 0;
