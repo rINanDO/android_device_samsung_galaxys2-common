@@ -1,2 +1,0 @@
-allow logpersist system_data_file:dir { add_name open read write remove_name};
-allow logpersist system_data_file:file { ioctl write  append create open getattr read rename unlink };

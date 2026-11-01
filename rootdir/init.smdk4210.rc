@@ -337,9 +337,6 @@ on post-fs-data
     write /sys/devices/virtual/misc/backlightnotification/enabled 1
     write /sys/devices/virtual/misc/backlightnotification/led_blink_enabled 1
 
-# Persistent logcat
-    mkdir /data/.logs 0775 system log
-
 on early-init
     write /proc/sys/kernel/magisk_workaround 1
 
@@ -409,11 +406,3 @@ on property:ro.vendor.build.type=userdebug
     # The folder is used to store method traces.
     chmod 0773 /data/misc/trace
     start console
-
-service persistentLogging /system/bin/logcat -b all -r 1024 -n 9 -v threadtime -f /data/.logs/log
-    user root
-    group system log
-    disabled
-
-on property:persist.logcat.enabled=1
-    start persistentLogging
