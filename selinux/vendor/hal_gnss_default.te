@@ -5,7 +5,7 @@ allow hal_gnss_default rild:unix_stream_socket { connectto read write };
 allow hal_gnss_default sysfs:file { open read write };
 allow hal_gnss_default system_data_file:file { create getattr open read write };
 allow hal_gnss_default system_data_file:dir { add_name write };
-allow hal_gnss_default vendor_file:file execmod;
+allow hal_gnss_default same_process_hal_file:file execmod;
 allow hal_gnss_default vndbinder_device:chr_file { ioctl open read write };
 allow hal_gnss_default appdomain:{ tcp_socket udp_socket } { getattr getopt setopt read write shutdown };
 allow hal_gnss_default dnsproxyd_socket:sock_file write;
