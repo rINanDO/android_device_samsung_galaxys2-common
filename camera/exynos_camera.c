@@ -1420,7 +1420,7 @@ int exynos_camera_picture(struct exynos_camera *exynos_camera)
 		if (exynos_camera->callbacks.request_memory != NULL) {
 			jpeg_thumbnail_data_memory =
 				exynos_camera->callbacks.request_memory(-1,
-					jpeg_thumbnail_size, 1, 0);
+					jpeg_thumbnail_size, 1, exynos_camera->callbacks.user);
 			if (jpeg_thumbnail_data_memory == NULL) {
 				ALOGE("%s: thumb memory request failed!", __func__);
 				goto error;
@@ -1513,7 +1513,7 @@ int exynos_camera_picture(struct exynos_camera *exynos_camera)
 		if (exynos_camera->callbacks.request_memory != NULL) {
 			jpeg_thumbnail_data_memory =
 				exynos_camera->callbacks.request_memory(-1,
-					jpeg_out_size, 1, 0);
+					jpeg_out_size, 1, exynos_camera->callbacks.user);
 			if (jpeg_thumbnail_data_memory == NULL) {
 				ALOGE("%s: thumbnail memory request failed!", __func__);
 				api_jpeg_encode_deinit(jpeg_fd);
@@ -1537,7 +1537,7 @@ int exynos_camera_picture(struct exynos_camera *exynos_camera)
 		if (exynos_camera->callbacks.request_memory != NULL) {
 			picture_data_memory =
 				exynos_camera->callbacks.request_memory(-1,
-					picture_size, 1, 0);
+					picture_size, 1, exynos_camera->callbacks.user);
 			if (picture_data_memory == NULL) {
 				ALOGE("%s: picture memory request failed!", __func__);
 				goto error;
@@ -1630,7 +1630,7 @@ int exynos_camera_picture(struct exynos_camera *exynos_camera)
 		if (exynos_camera->callbacks.request_memory != NULL) {
 			picture_data_memory =
 				exynos_camera->callbacks.request_memory(-1,
-					jpeg_out_size, 1, 0);
+					jpeg_out_size, 1, exynos_camera->callbacks.user);
 			if (picture_data_memory == NULL) {
 				ALOGE("%s: picture memory request failed!", __func__);
 				api_jpeg_encode_deinit(jpeg_fd);
@@ -1667,7 +1667,7 @@ int exynos_camera_picture(struct exynos_camera *exynos_camera)
 	if (exynos_camera->callbacks.request_memory != NULL) {
 		data_memory =
 			exynos_camera->callbacks.request_memory(-1,
-				data_size, 1, 0);
+				data_size, 1, exynos_camera->callbacks.user);
 		if (data_memory == NULL) {
 			ALOGE("%s: data memory request failed!", __func__);
 			goto error;
@@ -1839,7 +1839,7 @@ int exynos_camera_picture_start(struct exynos_camera *exynos_camera)
 
 		exynos_camera->picture_memory =
 			exynos_camera->callbacks.request_memory(fd,
-				exynos_camera->picture_buffer_length, 1, 0);
+				exynos_camera->picture_buffer_length, 1, exynos_camera->callbacks.user);
 		if (exynos_camera->picture_memory == NULL) {
 			ALOGE("%s: memory request failed!", __func__);
 			return -1;
@@ -2425,7 +2425,7 @@ int exynos_camera_preview_start(struct exynos_camera *exynos_camera)
 
 		exynos_camera->preview_memory =
 			exynos_camera->callbacks.request_memory(fd,
-				frame_size, exynos_camera->preview_buffers_count, 0);
+				frame_size, exynos_camera->preview_buffers_count, exynos_camera->callbacks.user);
 		if (exynos_camera->preview_memory == NULL) {
 			ALOGE("%s: memory request failed!", __func__);
 			goto error;
@@ -2648,7 +2648,7 @@ int exynos_camera_recording_start(struct exynos_camera *exynos_camera)
 
 		exynos_camera->recording_memory =
 			exynos_camera->callbacks.request_memory(-1, sizeof(struct exynos_camera_addrs),
-				exynos_camera->recording_buffers_count, 0);
+				exynos_camera->recording_buffers_count, exynos_camera->callbacks.user);
 		if (exynos_camera->recording_memory == NULL) {
 			ALOGE("%s: memory request failed!", __func__);
 			goto error;

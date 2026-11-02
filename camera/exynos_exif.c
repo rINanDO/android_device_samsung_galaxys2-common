@@ -448,7 +448,7 @@ int exynos_exif_create(struct exynos_camera *exynos_camera,
 
 	if (exynos_camera->callbacks.request_memory != NULL) {
 		exif_data_memory = exynos_camera->callbacks.request_memory(-1,
-			exif_data_size, 1, 0);
+			exif_data_size, 1, exynos_camera->callbacks.user);
 		if (exif_data_memory == NULL) {
 			ALOGE("%s: exif memory request failed!", __func__);
 			goto error;
