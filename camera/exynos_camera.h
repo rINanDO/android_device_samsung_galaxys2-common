@@ -301,6 +301,7 @@ struct exynos_v4l2_ext_control {
 
 int exynos_camera_params_init(struct exynos_camera *exynos_camera, int id);
 int exynos_camera_params_apply(struct exynos_camera *exynos_camera, bool doInit);
+int exynos_camera_params_get_focus_mode(struct exynos_camera *exynos_camera);
 
 int exynos_camera_auto_focus_start(struct exynos_camera *exynos_camera);
 void exynos_camera_auto_focus_stop(struct exynos_camera *exynos_camera);
