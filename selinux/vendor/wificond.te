@@ -1,0 +1,3 @@
+# The bcmdhd driver reads /data/.psm.info and writes /data/.wifiver.info
+# while wificond brings the interface up, with wificond's credentials
+allow wificond wifi_data_file:file rw_file_perms;
