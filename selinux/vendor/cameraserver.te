@@ -1,1 +1,4 @@
 allow cameraserver gpu_device:chr_file { ioctl open read write };
+
+# The HAL1 shim registers the V4L2 capture fd as preview memory
+allow cameraserver video_device:chr_file { getattr read write map };
