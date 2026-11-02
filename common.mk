@@ -43,7 +43,8 @@ PRODUCT_COPY_FILES += \
 # File system table
 PRODUCT_COPY_FILES += \
     $(COMMON_PATH)/rootdir/fstab.smdk4210:root/fstab.smdk4210 \
-    $(COMMON_PATH)/rootdir/fstab.smdk4210:$(TARGET_COPY_OUT_RAMDISK)/fstab.smdk4210
+    $(COMMON_PATH)/rootdir/fstab.smdk4210:$(TARGET_COPY_OUT_RAMDISK)/fstab.smdk4210 \
+    $(COMMON_PATH)/rootdir/fstab.smdk4210:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.smdk4210
 
 # Component overrides
 PRODUCT_COPY_FILES += \
