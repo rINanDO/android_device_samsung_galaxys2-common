@@ -1,3 +1,8 @@
 type rfkill_device, dev_type;
 type efs_block_device, dev_type;
 type mfc_device, dev_type;
+
+# The legacy gralloc opens /dev/ion read-write in every process that
+# allocates graphic buffers
+allow { appdomain -isolated_app_all } ion_device:chr_file w_file_perms;
+allow mediaswcodec ion_device:chr_file w_file_perms;
