@@ -65,7 +65,7 @@ struct exynos_camera_preset exynos_camera_presets_galaxys2[] = {
 			.preview_format = "yuv420sp",
 			.preview_frame_rate_values = "30,25,20,15,10,7",
 			.preview_frame_rate = 30,
-			.preview_fps_range_values = "(7000,30000),(15000,15000),(30000,30000)",
+			.preview_fps_range_values = "(7000,30000),(15000,15000),(24000,24000),(30000,30000)",
 			.preview_fps_range = "7000,30000",
 
 			.picture_size_values = "3264x2448,3264x1968,2048x1536,2048x1232,1280x960,800x480,640x480",
@@ -494,6 +494,8 @@ int exynos_camera_handle_preview(struct exynos_camera *exynos_camera) {
 	int preview_format = V4L2_PIX_FMT_NV21;
 	float preview_format_bpp = 1.5f;
 	int preview_fps = 0;
+	char *preview_fps_range_string;
+	int fps_min = 0, fps_max = 0;
 
 	// Preview format
 	preview_format_string = exynos_param_string_get(exynos_camera, "preview-format");
@@ -525,6 +527,14 @@ int exynos_camera_handle_preview(struct exynos_camera *exynos_camera) {
 
 	// Preview-fps
 	preview_fps = exynos_param_int_get(exynos_camera, "preview-frame-rate");
+
+	// A fixed preview-fps-range (camera2 aeTargetFpsRange) takes precedence
+	preview_fps_range_string = exynos_param_string_get(exynos_camera, "preview-fps-range");
+	if (preview_fps_range_string != NULL &&
+		sscanf(preview_fps_range_string, "%d,%d", &fps_min, &fps_max) == 2 &&
+		fps_min == fps_max && fps_max >= 1000)
+		preview_fps = fps_max / 1000;
+
 	if (preview_fps != exynos_camera->preview_fps) {
 		ALOGD("preview-fps: %d", preview_fps);
 		exynos_camera->preview_fps = preview_fps;
