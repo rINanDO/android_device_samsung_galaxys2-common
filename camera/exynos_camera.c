@@ -2094,7 +2094,7 @@ void exynos_camera_auto_focus_stop(struct exynos_camera *exynos_camera)
 
 int exynos_camera_preview(struct exynos_camera *exynos_camera)
 {
-	buffer_handle_t *buffer;
+	buffer_handle_t *buffer = NULL;
 	int stride;
 
 	int width, height;
@@ -2103,7 +2103,7 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	char *preview_format_string;
 	int frame_size, offset;
 	void *preview_data;
-	void *window_data;
+	void *window_data = NULL;
 
 	unsigned int recording_y_addr;
 	unsigned int recording_cbcr_addr;
@@ -2160,11 +2160,18 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	height = exynos_camera->preview_height;
 	format_bpp = exynos_camera->preview_format_bpp;
 
-	exynos_camera->preview_window->dequeue_buffer(exynos_camera->preview_window,
+	rc = exynos_camera->preview_window->dequeue_buffer(exynos_camera->preview_window,
 		&buffer, &stride);
 
 	if (!exynos_camera->preview_enabled)
 		goto error;
+
+	// The window goes away when the client dies: drop this frame
+	if (rc != 0 || buffer == NULL) {
+		ALOGE("%s: Unable to dequeue preview buffer (%d)", __func__, rc);
+		pthread_mutex_unlock(&exynos_camera->preview_mutex);
+		return 0;
+	}
 
 	exynos_camera->gralloc->lock(exynos_camera->gralloc, *buffer, GRALLOC_USAGE_SW_WRITE_OFTEN,
 		0, 0, width, height, &window_data);
