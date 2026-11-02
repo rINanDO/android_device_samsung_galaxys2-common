@@ -31,3 +31,6 @@ allow system_server vendor_file:file execmod;
 allow system_server build_bootimage_prop:file { getattr open read };
 allow system_server vendor_default_prop:file { getattr open read };
 
+
+# The passthrough sensors HAL runs in system_server
+allow system_server sysfs_sensor:file rw_file_perms;

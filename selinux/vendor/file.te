@@ -13,3 +13,4 @@ type sysfs_io_sched, fs_type, sysfs_type;
 type sysfs_sec_key, fs_type, sysfs_type;
 type sysfs_sec_touchkey, fs_type, sysfs_type;
 type firmware_bluetooth, file_type;
+type sysfs_sensor, fs_type, sysfs_type;

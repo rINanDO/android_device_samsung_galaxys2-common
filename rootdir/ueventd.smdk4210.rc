@@ -31,3 +31,7 @@
 /dev/akm8975              0660   system     system
 /dev/accelerometer        0660   system     system
 /dev/uinput               0660   system     system
+
+# Sensors (written by the passthrough sensors HAL in system_server)
+/sys/devices/virtual/input/input*   enable       0664   system   system
+/sys/devices/virtual/input/input*   poll_delay   0664   system   system
