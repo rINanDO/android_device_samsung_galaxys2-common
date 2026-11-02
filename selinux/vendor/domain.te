@@ -3,3 +3,9 @@ allow ueventd { firmware_mfc }:file r_file_perms;
 
 ## 32bit personality requests
 dontaudit domain kernel:system module_request;
+
+## The linker resolves the LD_SHIM_LIBS targets (libsec-ril.so and the GPS
+## HAL) in every process with access(R_OK). Core domains are not allowed to
+## read them, and the linker then falls back to the unresolved path, which
+## is already the real path, so the denial is harmless.
+dontaudit coredomain same_process_hal_file:file read;
