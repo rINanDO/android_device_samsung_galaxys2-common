@@ -142,3 +142,6 @@
 
 # Bluetooth
 /(vendor|system/vendor)/bin/hw/android\.hardware\.audio\.service\.samsung\.legacy u:object_r:hal_audio_default_exec:s0
+
+# Sensors
+/sys/devices/virtual/input/input[0-9]+/(enable|poll_delay)       u:object_r:sysfs_sensor:s0
