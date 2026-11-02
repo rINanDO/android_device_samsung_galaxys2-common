@@ -76,8 +76,6 @@ Only the three quirks included above are recognized at this point:
 -->
 
 <MediaCodecs>
-    <Include href="media_codecs_google_audio.xml" />
-    <Include href="media_codecs_google_telephony.xml" />
     <Settings>
         <Variant name="slow-cpu" enabled="true" />
     </Settings>
@@ -112,5 +110,4 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.SEC.H263.Encoder" type="video/3gpp" />
         <MediaCodec name="OMX.SEC.AVC.Encoder" type="video/avc" />
     </Encoders>
-    <Include href="media_codecs_google_video_le.xml" />
 </MediaCodecs>
