@@ -285,12 +285,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.telephony.call_ring.delay=3000
 
 # Memory Optimizations
+# The kernel has no PSI, so the in-kernel lowmemorykiller does the killing
+# and lmkd only passes it the minfree levels from ActivityManager. The
+# ro.lmk.* tunables of the userspace killer have no effect here.
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.config.max_starting_bg=1 \
-    ro.lmk.use_psi=false \
-    ro.lmk.critical=0 \
-    ro.lmk.low=950 \
-    ro.lmk.swap_free_low_percentage=15 \
     ro.vendor.qti.am.reschedule_service=true \
     ro.vendor.qti.sys.fw.use_trim_settings=true \
     ro.vendor.qti.sys.fw.trim_empty_percent=50 \
