@@ -145,3 +145,6 @@
 
 # Sensors
 /sys/devices/virtual/input/input[0-9]+/(enable|poll_delay)       u:object_r:sysfs_sensor:s0
+
+# Switches (headset, dock, HDMI). The kernel can't label sysfs by path.
+/sys/devices/virtual/switch(/.*)?                                u:object_r:sysfs_switch:s0
