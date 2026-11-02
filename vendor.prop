@@ -113,14 +113,6 @@ persist.vendor.qcom.bluetooth.aptxadaptiver2_1_support=true
 
 ro.bluetooth.a2dp_offload.supported=true
 
-# Dalvik
-dalvik.vm.heapgrowthlimit=256m
-dalvik.vm.heapmaxfree=8m
-dalvik.vm.heapminfree=512k
-dalvik.vm.heapsize=512m
-dalvik.vm.heapstartsize=8m
-dalvik.vm.heaptargetutilization=0.75
-
 # Display
 debug.gralloc.gfx_ubwc_disable=0
 debug.sf.enable_hwc_vds=1
