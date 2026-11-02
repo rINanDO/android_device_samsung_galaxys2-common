@@ -65,7 +65,7 @@ struct exynos_camera_preset exynos_camera_presets_galaxys2[] = {
 			.preview_format = "yuv420sp",
 			.preview_frame_rate_values = "30,25,20,15,10,7",
 			.preview_frame_rate = 30,
-			.preview_fps_range_values = "(7000,30000)",
+			.preview_fps_range_values = "(7000,30000),(15000,15000),(30000,30000)",
 			.preview_fps_range = "7000,30000",
 
 			.picture_size_values = "3264x2448,3264x1968,2048x1536,2048x1232,1280x960,800x480,640x480",
@@ -138,7 +138,7 @@ struct exynos_camera_preset exynos_camera_presets_galaxys2[] = {
 			.preview_format = "yuv420sp",
 			.preview_frame_rate_values = "30,25,20,15,10,7",
 			.preview_frame_rate = 30,
-			.preview_fps_range_values = "(7000,30000)",
+			.preview_fps_range_values = "(7000,30000),(15000,15000),(30000,30000)",
 			.preview_fps_range = "7000,30000",
 
 			.picture_size_values = "1600x1200,640x480",
