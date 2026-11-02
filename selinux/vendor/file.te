@@ -17,3 +17,4 @@ type firmware_bluetooth, file_type;
 # LiveDisplay
 type display_vendor_data_file, file_type, data_file_type;
 type sysfs_sensor, fs_type, sysfs_type;
+type proc_vm_tunable, fs_type, proc_type;

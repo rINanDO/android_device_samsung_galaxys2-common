@@ -1,0 +1,5 @@
+# VM tunables written by tweaks.rc
+genfscon proc /sys/vm/clean_min_kbytes      u:object_r:proc_vm_tunable:s0
+genfscon proc /sys/vm/dirty_ratio           u:object_r:proc_vm_tunable:s0
+genfscon proc /sys/vm/swappiness            u:object_r:proc_vm_tunable:s0
+genfscon proc /sys/vm/vfs_cache_pressure    u:object_r:proc_vm_tunable:s0
