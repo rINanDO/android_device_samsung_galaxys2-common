@@ -28,6 +28,7 @@
 
 #include <hardware/hardware.h>
 #include <hardware/camera.h>
+#include <cutils/native_handle.h>
 
 #ifndef _EXYNOS_CAMERA_H_
 #define _EXYNOS_CAMERA_H_
@@ -230,6 +231,8 @@ struct exynos_camera {
 	int recording_msg_start_result;
 	int recording_msg_stop;
 	camera_memory_t *recording_memory;
+	native_handle_t *recording_handles[EXYNOS_CAMERA_MAX_BUFFERS_COUNT];
+	unsigned int recording_inflight;
 	int recording_buffers_count;
 
 	// Camera params
@@ -281,6 +284,26 @@ struct exynos_camera_addrs {
 	unsigned int cbcr;
 	unsigned int index;
 	unsigned int reserved;
+};
+
+/*
+ * Recording frames are handed out as VideoNativeHandleMetadata
+ * (media/hardware/HardwareAPI.h): CameraSource no longer passes the old
+ * kMetadataBufferTypeCameraSource blob on to the encoder. The native handle
+ * carries no fds, only the physical addresses of the NV12 frame.
+ */
+#define EXYNOS_CAMERA_METADATA_NATIVE_HANDLE	3 // kMetadataBufferTypeNativeHandleSource
+
+struct exynos_camera_native_metadata {
+	unsigned int type;
+	native_handle_t *handle;
+};
+
+enum {
+	EXYNOS_CAMERA_HANDLE_Y,
+	EXYNOS_CAMERA_HANDLE_CBCR,
+	EXYNOS_CAMERA_HANDLE_INDEX,
+	EXYNOS_CAMERA_HANDLE_INTS,
 };
 
 // This is because the linux header uses anonymous union
