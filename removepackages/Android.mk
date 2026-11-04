@@ -10,7 +10,8 @@ LOCAL_OVERRIDES_PACKAGES := \
     AudioFX \
     DeviceAsWebcam \
     ImsServiceEntitlement \
-    Seedvault
+    Seedvault \
+    Updater
 LOCAL_UNINSTALLABLE_MODULE := true
 LOCAL_CERTIFICATE := PRESIGNED
 LOCAL_SRC_FILES := /dev/null
