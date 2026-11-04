@@ -2395,6 +2395,25 @@ int exynos_camera_preview_start(struct exynos_camera *exynos_camera)
 
 	ALOGD("%s: Starting preview %dx%d %d", __func__, width, height, format_bpp);
 
+	/*
+	 * The M5MO 1080p mode has a narrower field of view (and a lower frame
+	 * rate) than its 720p mode. The sensor output size control is consumed
+	 * by the next FIMC0 preview s_fmt, so re-apply it on every movie-mode
+	 * preview start while a 1080p video size is set; otherwise a preview
+	 * restart would silently fall back to the preview-sized sensor mode.
+	 * Apps such as Open Camera only set 1080p right before recording and
+	 * restart the preview, so 720p keeps the faster, wider 720p mode.
+	 */
+	if (exynos_camera->camera_sensor_mode == SENSOR_MOVIE &&
+		exynos_camera->camera_picture_format == V4L2_PIX_FMT_JPEG &&
+		exynos_camera->recording_width == 1920 &&
+		exynos_camera->recording_height == 1080) {
+		rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SENSOR_OUTPUT_SIZE,
+			(1920 << 16) | 1080);
+		if (rc < 0)
+			ALOGE("%s: Unable to set the movie sensor output size", __func__);
+	}
+
 	rc = exynos_v4l2_s_fmt_pix_cap(exynos_camera, 0, width, height, format, V4L2_PIX_FMT_MODE_PREVIEW);
 	if (rc < 0) {
 		ALOGE("%s: s fmt failed!", __func__);
