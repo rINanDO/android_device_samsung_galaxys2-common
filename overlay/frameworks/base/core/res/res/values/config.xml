@@ -136,11 +136,12 @@
     <string name="config_dozeComponent">com.android.systemui/com.android.systemui.doze.DozeService</string>
     <bool name="config_dozeAfterScreenOff">true</bool>
 
-    <!-- Keep chosen default camera app pinned in memory for faster launching -->
+    <!-- Don't keep apps pinned (mlocked) in memory, RAM is too scarce:
+         Android 16 pins the home app by size (config_pinnerHomePinBytes,
+         60 MB) and WebView (20 MB) unless these are 0. -->
     <bool name="config_pinnerCameraApp">false</bool>
-
-    <!-- Keep home app pinned in memory for faster launching -->
-    <bool name="config_pinnerHomeApp">false</bool>
+    <integer name="config_pinnerHomePinBytes">0</integer>
+    <integer name="config_pinnerWebviewPinBytes">0</integer>
 
     <!-- Whether UI for multi user should be shown -->
     <bool name="config_enableMultiUserUI">true</bool>
