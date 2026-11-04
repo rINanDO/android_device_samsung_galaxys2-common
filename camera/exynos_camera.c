@@ -2212,18 +2212,25 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	// Recording
 
 	if (exynos_camera->recording_enabled && exynos_camera->recording_memory != NULL) {
-		pthread_mutex_lock(&exynos_camera->recording_mutex);
-
 		// V4L2
 
+		/*
+		 * Don't hold recording_mutex while waiting: when every buffer is
+		 * out, the frame that ends the wait comes from a release, and
+		 * releasing takes the mutex.
+		 */
 		rc = exynos_v4l2_poll(exynos_camera, 2);
 		if (rc < 0) {
 			ALOGE("%s: poll failed!", __func__);
-			goto error_recording;
+			ALOGE("%s: Exiting with error", __func__);
+			return -1;
 		} else if (rc == 0) {
 			ALOGE("%s: poll timeout!", __func__);
-			goto error_recording;
+			ALOGE("%s: Exiting with error", __func__);
+			return -1;
 		}
+
+		pthread_mutex_lock(&exynos_camera->recording_mutex);
 
 		index = exynos_v4l2_dqbuf_cap(exynos_camera, 2);
 		if (index < 0) {
