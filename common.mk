@@ -213,6 +213,10 @@ PRODUCT_PACKAGES += \
     camera.device@1.0-impl \
     camera.smdk4210
 
+# Old-API camera app (zero-copy HAL1 recording, 1080p), replaces Aperture
+PRODUCT_PACKAGES += \
+    OpenCamera
+
 # Video recording still needs these, which predate Android 16
 #PRODUCT_PACKAGES += \
 #    libstagefright-shim \
