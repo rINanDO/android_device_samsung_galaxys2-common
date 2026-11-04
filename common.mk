@@ -217,6 +217,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     OpenCamera
 
+# Lighter Go launcher (keeps recents), overrides Launcher3QuickStep
+PRODUCT_PACKAGES += \
+    Launcher3QuickStepGo
+
 # Drop inherited packages that are useless or too heavy here
 PRODUCT_PACKAGES += \
     RemovePackages
