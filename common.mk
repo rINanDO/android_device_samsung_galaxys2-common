@@ -217,6 +217,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     OpenCamera
 
+# Drop inherited packages that are useless or too heavy here
+PRODUCT_PACKAGES += \
+    RemovePackages
+
 # Video recording still needs these, which predate Android 16
 #PRODUCT_PACKAGES += \
 #    libstagefright-shim \
