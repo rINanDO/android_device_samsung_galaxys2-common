@@ -19,7 +19,10 @@ PRODUCT_BUILD_RECOVERY_IMAGE := true
 
 # Enable DM file pre-opting to reduce first boot time
 PRODUCT_DEX_PREOPT_GENERATE_DM_FILES := true
-PRODUCT_DEX_PREOPT_DEFAULT_COMPILER_FILTER := verify
+# Compile the system apps fully on the build host. The A9 interprets and
+# JITs verify-only code slowly (janky Compose lists), and compiled code is
+# clean file-backed memory, unlike the JIT cache.
+PRODUCT_DEX_PREOPT_DEFAULT_COMPILER_FILTER := speed
 
 DONT_UNCOMPRESS_PRIV_APPS_DEXS := true
 
@@ -404,6 +407,12 @@ $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # Linux 3.0 has no userfaultfd, so ART falls back to the CC collector.
 # Compile the boot image for it, with read barriers
 PRODUCT_ENABLE_UFFD_GC := false
+
+# User-installed apps ship without a profile, so speed-profile ends up
+# as verify. Compile them fully at install time instead.
+PRODUCT_SYSTEM_PROPERTIES += \
+    pm.dexopt.install=speed \
+    pm.dexopt.install-bulk=speed
 
 # Enable ADB debugging at boot
 ifeq ($(WITH_ADB_DEBUG_AT_BOOT),true)
