@@ -988,6 +988,9 @@ void exynos_camera_params_handle_camera_sensor_mode(struct exynos_camera *exynos
 
 	ALOGD("camera_sensor_mode: %s", camera_sensor_mode == SENSOR_CAMERA ? "SENSOR_CAMERA" : "SENSOR_MOVIE");
 	ALOGD("camera_sensor_mode: V4L2_CID_CAMERA_SENSOR_MODE: %d", camera_sensor_mode);
+	// The sensor stops sending frames until preview is restarted
+	if (exynos_camera->preview_enabled)
+		exynos_camera->preview_sensor_mode_changed = 1;
 	rc = exynos_v4l2_s_ctrl(exynos_camera, 0, V4L2_CID_CAMERA_SENSOR_MODE, camera_sensor_mode);
 	if (rc < 0) {
 		ALOGE("camera_sensor_mode: V4L2_CID_CAMERA_SENSOR_MODE failed!");
@@ -2149,6 +2152,11 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 		ALOGE("%s: poll failed!", __func__);
 		goto error;
 	} else if (rc == 0) {
+		if (exynos_camera->preview_sensor_mode_changed) {
+			// Keep waiting for the client to restart preview
+			pthread_mutex_unlock(&exynos_camera->preview_mutex);
+			return 0;
+		}
 		ALOGE("%s: poll timeout!", __func__);
 		goto error;
 	}
@@ -2336,6 +2344,9 @@ void *exynos_camera_preview_thread(void *data)
 		rc = exynos_camera_preview(exynos_camera);
 		if (rc < 0) {
 			ALOGE("%s: preview failed!", __func__);
+			// A later stop must still free what preview holds
+			if (exynos_camera->preview_enabled)
+				exynos_camera->preview_failed = 1;
 			exynos_camera->preview_enabled = 0;
 		}
 
@@ -2563,7 +2574,7 @@ void exynos_camera_preview_stop(struct exynos_camera *exynos_camera)
 	if (exynos_camera == NULL)
 		goto exit;
 
-	if (!exynos_camera->preview_enabled) {
+	if (!exynos_camera->preview_enabled && !exynos_camera->preview_failed) {
 		ALOGE("Preview was already stopped!");
 		goto exit;
 	}
@@ -2584,6 +2595,9 @@ void exynos_camera_preview_stop(struct exynos_camera *exynos_camera)
 		usleep(100000); // Sleep 100 ms
 
 	}
+
+	exynos_camera->preview_failed = 0;
+	exynos_camera->preview_sensor_mode_changed = 0;
 
 	rc = exynos_v4l2_streamoff_cap(exynos_camera, 0);
 	if (rc < 0) {
