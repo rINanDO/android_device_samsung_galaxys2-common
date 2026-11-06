@@ -29,4 +29,9 @@
 
     <!-- Enable WPA2 to WPA3 auto-upgrade -->
     <bool translatable="false" name="config_wifiSaeUpgradeEnabled">false</bool>
+
+    <!-- The BCM4330 driver has no scheduled scan, so hardware PNO is not
+         available. Scan from the framework while the screen is off instead,
+         so Wi-Fi still connects when the screen is off. -->
+    <bool translatable="false" name="config_wifiSwPnoEnabled">true</bool>
 </resources>
