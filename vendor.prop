@@ -36,3 +36,6 @@ ro.oem_unlock_supported=1
 
 # API
 ro.product.first_api_level=9
+
+# Give this slow hardware more time before Android reports an ANR
+ro.hw_timeout_multiplier=2
