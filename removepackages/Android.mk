@@ -8,10 +8,18 @@ LOCAL_MODULE_CLASS := APPS
 LOCAL_MODULE_TAGS := optional
 LOCAL_OVERRIDES_PACKAGES := \
     AudioFX \
+    BuiltInPrintService \
     DeviceAsWebcam \
+    DeviceDiagnostics \
+    DynamicSystemInstallationService \
     ImsServiceEntitlement \
+    LiveWallpapersPicker \
+    LocalTransport \
+    PrintRecommendationService \
+    PrintSpooler \
     SecureElement \
     Seedvault \
+    StatementService \
     Updater
 LOCAL_UNINSTALLABLE_MODULE := true
 LOCAL_CERTIFICATE := PRESIGNED
