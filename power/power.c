@@ -31,6 +31,7 @@
 /* The governor stores these in a 32-bit long, so about 2.1 s at most */
 #define INTERACTION_BOOST_NS "1000000000"
 #define LAUNCH_BOOST_NS "2000000000"
+#define WAKE_BOOST_NS "2000000000"
 
 static bool low_power;
 
@@ -65,9 +66,15 @@ static void power_init(struct power_module *module __unused)
 
 static void power_set_interactive(struct power_module *module __unused, int on)
 {
-    if (on)
+    if (on) {
         boost_setup();
-    else
+        /*
+         * Waking runs on one slow core otherwise: pegasusq only brings
+         * up CPU1 seconds later, after the screen is already on.
+         */
+        if (!low_power)
+            sysfs_write(PEGASUSQ_PATH "boost_lock_time", WAKE_BOOST_NS);
+    } else
         sysfs_write(PEGASUSQ_PATH "boost_lock_time", "0");
 }
 
