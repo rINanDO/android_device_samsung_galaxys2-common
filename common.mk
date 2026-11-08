@@ -409,11 +409,13 @@ $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # Compile the boot image for it, with read barriers
 PRODUCT_ENABLE_UFFD_GC := false
 
-# User-installed apps ship without a profile, so speed-profile ends up
-# as verify. Compile them fully at install time instead.
+# Compiling fully at install time makes installs slow, and user-installed apps
+# ship without a profile, so speed-profile wouldn't help them. Install quickly
+# and let background dexopt compile them fully when the phone is idle.
 PRODUCT_SYSTEM_PROPERTIES += \
-    pm.dexopt.install=speed \
-    pm.dexopt.install-bulk=speed
+    pm.dexopt.bg-dexopt=speed \
+    pm.dexopt.install=verify \
+    pm.dexopt.install-bulk=verify
 
 # Enable ADB debugging at boot
 ifeq ($(WITH_ADB_DEBUG_AT_BOOT),true)
