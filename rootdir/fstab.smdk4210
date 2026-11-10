@@ -21,4 +21,4 @@
 /dev/block/platform/dw_mmc/by-name/RECOVERY   /recovery               emmc      defaults      recoveryonly
 
 # zRAM
-/dev/block/zram0                            none                    swap      defaults      zramsize=367001600
+/dev/block/zram0                            none                    swap      defaults      zramsize=536870912,max_comp_streams=2
