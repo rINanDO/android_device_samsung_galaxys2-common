@@ -410,3 +410,11 @@ service persistentLogging /system/bin/logcat -b all -r 1024 -n 9 -v threadtime -
 
 on property:persist.logcat.enabled=1
     start persistentLogging
+
+# This panel has no color modes, so nothing in Settings can switch back from
+# "Boosted" (saturation 1.1) left over from older builds. Any saturation other
+# than 1.0 makes surfaceflinger compose every layer on the GPU instead of the
+# hardware composer overlays. Persistent properties are loaded before
+# surfaceflinger starts, so it reads the reset value.
+on property:persist.sys.sf.color_saturation=1.1
+    setprop persist.sys.sf.color_saturation 1.0
