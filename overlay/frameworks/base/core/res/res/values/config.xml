@@ -455,4 +455,9 @@
          user-set value if toggled by settings so the "Transition animation scale" setting
          should also be hidden if intended to be permanent. -->
     <item name="config_appTransitionAnimationDurationScaleDefault" format="float" type="dimen">1.0</item>
+
+    <!-- Lower the low memory killer levels so that more cached apps are swapped
+         to zram before they are killed. ActivityManager would pick its 1 GB
+         table (72 to 180 MB); this scales all six levels down to 48 to 120 MB. -->
+    <integer name="config_lowMemoryKillerMinFreeKbytesAbsolute">122880</integer>
 </resources>
