@@ -1,1 +1,6 @@
 allow untrusted_app method_trace_data_file:file { execute read unlink };
+
+# gralloc runs in the app's process and allocates buffers that the
+# composer scans out from ION (libsecion opens /dev/ion read-write).
+# Without it, buffers fall back to UMP and can't be shown on an overlay.
+allow untrusted_app_all ion_device:chr_file write;

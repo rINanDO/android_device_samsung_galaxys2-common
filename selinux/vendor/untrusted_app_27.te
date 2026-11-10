@@ -1,2 +1,1 @@
-allow untrusted_app_27 ion_device:chr_file write;
 allow untrusted_app_27 method_trace_data_file:file { execute read unlink };
