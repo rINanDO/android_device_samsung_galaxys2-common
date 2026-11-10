@@ -215,6 +215,10 @@ PRODUCT_PACKAGES += \
     libstagefright-shim \
     mediaserver.rc
 
+# Camera app: Open Camera replaces Aperture (see prebuilt/OpenCamera)
+PRODUCT_PACKAGES += \
+    OpenCamera
+
 PRODUCT_PROPERTY_OVERRIDES += \
     media.settings.xml=/vendor/etc/media_profiles.xml \
     debug.stagefright.ccodec=0 \

@@ -1,0 +1,17 @@
+// Open Camera 1.56.2 (versionCode 96) from F-Droid, signed by F-Droid:
+// https://f-droid.org/repo/net.sourceforge.opencamera_96.apk
+// sha256 ca5672ca8c7174554ca0b07b5b26e505817a05142f571cf2abe67e790c30249c
+//
+// Replaces Aperture. CameraX refuses preview + 720p recording on a LEGACY
+// camera, while Open Camera with the old camera API uses every size the HAL
+// offers.
+android_app_import {
+    name: "OpenCamera",
+    apk: "OpenCamera.apk",
+    presigned: true,
+    // Preopt would store the dex uncompressed, which breaks the v2/v3 signature.
+    dex_preopt: {
+        enabled: false,
+    },
+    overrides: ["Aperture"],
+}
