@@ -45,6 +45,10 @@ PRODUCT_COPY_FILES += \
     $(COMMON_PATH)/rootdir/fstab.smdk4210:root/fstab.smdk4210 \
     $(COMMON_PATH)/rootdir/fstab.smdk4210:$(TARGET_COPY_OUT_RAMDISK)/fstab.smdk4210
 
+# Audio effects
+PRODUCT_COPY_FILES += \
+    frameworks/av/media/libeffects/data/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml
+
 # Component overrides
 PRODUCT_COPY_FILES += \
     $(COMMON_PATH)/configs/component-overrides.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sysconfig/component-overrides.xml
