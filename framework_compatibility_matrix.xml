@@ -23,4 +23,21 @@
             <regex-instance>slot[0-9]+</regex-instance>
         </interface>
     </hal>
+    <!-- Legacy HIDL HALs still served by the device that the framework matrices (FCM 7+) no longer list. -->
+    <hal format="hidl" optional="true">
+        <name>android.hardware.bluetooth.audio</name>
+        <version>2.0</version>
+        <interface>
+            <name>IBluetoothAudioProvidersFactory</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>android.hardware.health</name>
+        <version>2.1</version>
+        <interface>
+            <name>IHealth</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
 </compatibility-matrix>

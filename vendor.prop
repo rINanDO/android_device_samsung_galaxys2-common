@@ -35,7 +35,7 @@ debug.stagefright.omx_default_rank.sw-audio=1
 ro.oem_unlock_supported=1
 
 # API
-ro.product.first_api_level=9
+# ro.product.first_api_level comes from PRODUCT_SHIPPING_API_LEVEL (common.mk)
 
 # Give this slow hardware more time before Android reports an ANR
 ro.hw_timeout_multiplier=2
