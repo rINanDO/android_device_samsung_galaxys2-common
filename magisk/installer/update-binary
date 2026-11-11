@@ -1,0 +1,197 @@
+#!/sbin/sh
+#
+# Magisk installer and uninstaller for the Galaxy S2 (i9100), flashed from TWRP.
+#
+# The S2 has no boot image: the ramdisk Android boots from is built into the
+# zImage. The kernel's stage 1 init can instead boot a ramdisk stored in a slot
+# on the HIDDEN partition (see usr/galaxys2_initramfs_files/init in the kernel).
+# This script lets Magisk patch the stock ramdisk and writes the result to that
+# slot. The KERNEL partition is never written, so a bad result can always be
+# undone by flashing the uninstaller.
+#
+# A zip whose name contains "uninstall" clears the slot and removes Magisk.
+
+OUTFD=$2
+ZIPFILE=$3
+
+# Must match the kernel's stage 1 init
+SLOTDEV=/dev/block/mmcblk0p12
+SLOTOFF=2048                    # in 512-byte sectors: 1 MiB into HIDDEN (8 MiB);
+                                # Android uses only the first 64 KiB as /misc
+SLOTMAX=14335                   # sectors: rest of the partition after the header
+MAGIC="I9100RD"
+STOCK=/.stock-boot.cpio         # left in the TWRP rootfs by stage 1
+
+WORK=/dev/i9100-magisk          # outside /dev/tmp, which Magisk's script removes
+
+ui_print() {
+    echo "ui_print $1" > /proc/self/fd/$OUTFD
+    echo "ui_print" > /proc/self/fd/$OUTFD
+}
+
+abort() {
+    ui_print "$1"
+    rm -rf $WORK
+    exit 1
+}
+
+clear_slot() {
+    dd if=/dev/zero of=$SLOTDEV bs=512 seek=$SLOTOFF count=1 conv=notrunc 2>/dev/null
+    sync
+}
+
+ui_print "*******************************"
+ui_print " Magisk for Galaxy S2 (i9100)"
+ui_print "*******************************"
+
+[ -b $SLOTDEV ] || abort "! $SLOTDEV not found"
+slot_end=$(( SLOTOFF + 1 + SLOTMAX ))
+part_size=$(cat /sys/class/block/mmcblk0p12/size 2>/dev/null)
+[ -n "$part_size" ] && [ "$part_size" -ge "$slot_end" ] \
+    || abort "! HIDDEN partition is too small for the ramdisk slot"
+
+if echo "$ZIPFILE" | grep -q uninstall; then
+    ui_print "- Clearing the ramdisk slot"
+    clear_slot
+    mount /data 2>/dev/null
+    ui_print "- Removing Magisk from /data/adb"
+    rm -rf /data/adb/magisk /data/adb/magisk.db /data/adb/modules \
+        /data/adb/modules_update /data/adb/post-fs-data.d /data/adb/service.d
+    rm -f /system/addon.d/99-magisk.sh /system_root/system/addon.d/99-magisk.sh 2>/dev/null
+    ui_print "- Done, Android boots the stock ramdisk again"
+    exit 0
+fi
+
+[ -f $STOCK ] || abort "! $STOCK missing: this TWRP was not started by a kernel with Magisk slot support"
+
+rm -rf $WORK
+mkdir -p $WORK/fake $WORK/out
+cd $WORK || abort "! Unable to create $WORK"
+
+ui_print "- Extracting Magisk"
+unzip -o "$ZIPFILE" Magisk.apk boot-template.img -d $WORK >&2 \
+    || abort "! Unable to extract the zip"
+APK=$WORK/Magisk.apk
+
+# Same preparation as Magisk's own update-binary
+export TMPDIR=/dev/tmp
+rm -rf $TMPDIR
+mkdir -p $TMPDIR
+export BBBIN=$TMPDIR/busybox
+unzip -o "$APK" "lib/armeabi-v7a/libbusybox.so" -d $TMPDIR >&2
+mv -f $TMPDIR/lib/armeabi-v7a/libbusybox.so $BBBIN
+chmod 755 $BBBIN
+$BBBIN rm -rf $TMPDIR/lib
+export INSTALLER=$TMPDIR/install
+$BBBIN mkdir -p $INSTALLER
+$BBBIN unzip -o "$APK" "assets/*" "lib/*" "META-INF/com/google/*" \
+    -x "lib/*/libbusybox.so" -d $INSTALLER >&2
+[ -f $INSTALLER/META-INF/com/google/android/updater-script ] \
+    || abort "! Magisk.apk is not a Magisk release"
+
+MAGISKBOOT=$WORK/magiskboot
+cp $INSTALLER/lib/armeabi-v7a/libmagiskboot.so $MAGISKBOOT
+chmod 755 $MAGISKBOOT
+
+ui_print "- Building a boot image from the stock ramdisk"
+cd $WORK/fake
+$MAGISKBOOT unpack $WORK/boot-template.img >&2 || abort "! Unable to unpack the template"
+cp -f $STOCK ramdisk.cpio
+$MAGISKBOOT repack $WORK/boot-template.img $WORK/boot.img >&2 \
+    || abort "! Unable to build the boot image"
+cd $WORK
+rm -rf $WORK/fake
+
+# Run Magisk's own flash script with two changes:
+# - patch $WORK/boot.img (a regular file, so flash_image stores the result
+#   there) instead of looking for the boot partition, which on this device
+#   would be the KERNEL partition
+# - no addon.d script: on a ROM update it would flash a boot image into the
+#   KERNEL partition
+sed -e "s|^find_boot_image\$|BOOTIMAGE=$WORK/boot.img|" \
+    -e 's|^if \[ -d /system/addon.d \]; then|if false; then|' \
+    $INSTALLER/META-INF/com/google/android/updater-script > $WORK/updater-script
+grep -q "^BOOTIMAGE=$WORK/boot.img" $WORK/updater-script \
+    || abort "! Unsupported Magisk version (flash script changed)"
+grep -q "^if false; then" $WORK/updater-script \
+    || abort "! Unsupported Magisk version (addon.d step changed)"
+
+# Magisk's boot_patch.sh only detects the pre-init partition (where magiskinit
+# finds module sepolicy rules) when it runs in Android; in recovery it only
+# copies it from an earlier Magisk config, which a stock ramdisk does not have.
+# Without it the app asks to reinstall Magisk from the app, which on this
+# device would patch the KERNEL partition. Magisk's own detector cannot run
+# here (dynamically linked), so pick the partition by the same rules: the last
+# of persist, metadata, cache, data that is a read-write ext4/f2fs mount of a
+# by-name or block device, /data only when not encrypted (or FBE with
+# /data/unencrypted).
+mount /data 2>/dev/null
+mount /cache 2>/dev/null
+mount /metadata 2>/dev/null
+mount /persist 2>/dev/null
+find_preinit_device() {
+    local mnt src fs opts dev=
+    for mnt in /persist /mnt/vendor/persist /metadata /cache /data; do
+        set -- $(grep " $mnt " /proc/mounts | head -n 1)
+        src=$1; fs=$3; opts=$4
+        [ -n "$src" ] || continue
+        case $fs in ext4|f2fs) ;; *) continue ;; esac
+        case ",$opts," in *,rw,*) ;; *) continue ;; esac
+        case ${src%/*} in */by-name|*/block) ;; *) continue ;; esac
+        if [ $mnt = /data ] && [ "$(getprop ro.crypto.state)" = encrypted ] \
+            && [ ! -d /data/unencrypted ]; then
+            continue
+        fi
+        dev=${src##*/}
+    done
+    echo $dev
+}
+export PREINITDEVICE=$(find_preinit_device)
+[ -n "$PREINITDEVICE" ] || abort "! Unable to find a pre-init partition (mount /data or /cache)"
+ui_print "- Pre-init partition: $PREINITDEVICE"
+
+ASH_STANDALONE=1 $BBBIN sh $WORK/updater-script "$1" "$OUTFD" "$APK" \
+    || abort "! Magisk failed to patch the ramdisk"
+
+ui_print "- Storing the patched ramdisk in the slot"
+cd $WORK/out
+$MAGISKBOOT unpack $WORK/boot.img >&2 || abort "! Unable to unpack the patched image"
+[ -f ramdisk.cpio ] || abort "! Patched image has no ramdisk"
+$MAGISKBOOT cpio ramdisk.cpio test >&2
+[ $? -eq 1 ] || abort "! Ramdisk is not patched by Magisk"
+
+# wc -c, not stat -c: TWRP's busybox stat has no -c
+size=$(wc -c < ramdisk.cpio)
+[ -n "$size" ] && [ "$size" -gt 0 ] || abort "! Unable to read the ramdisk size"
+sectors=$(( (size + 511) / 512 ))
+[ $sectors -le $SLOTMAX ] || abort "! Patched ramdisk too large ($size bytes)"
+pad=$(( sectors * 512 - size ))
+[ $pad -gt 0 ] && dd if=/dev/zero bs=1 count=$pad 2>/dev/null >> ramdisk.cpio
+data_sha=$(sha1sum ramdisk.cpio | cut -d' ' -f1)
+stock_sha=$(sha1sum $STOCK | cut -d' ' -f1)
+
+# Invalidate the old header first, write the data, then the new header, so a
+# slot is never valid while it is being written
+clear_slot
+dd if=ramdisk.cpio of=$SLOTDEV bs=512 seek=$(( SLOTOFF + 1 )) conv=notrunc 2>/dev/null \
+    || abort "! Writing the slot failed"
+sync
+echo 3 > /proc/sys/vm/drop_caches   # read back from the eMMC, not the page cache
+check=$(dd if=$SLOTDEV bs=512 skip=$(( SLOTOFF + 1 )) count=$sectors 2>/dev/null | sha1sum | cut -d' ' -f1)
+[ "$check" = "$data_sha" ] || abort "! Slot read-back does not match"
+
+printf "%s 1 %s %s %s\n" $MAGIC $sectors $data_sha $stock_sha > header
+dd if=/dev/zero bs=1 count=$(( 512 - $(wc -c < header) )) 2>/dev/null >> header
+dd if=header of=$SLOTDEV bs=512 seek=$SLOTOFF count=1 conv=notrunc 2>/dev/null \
+    || abort "! Writing the slot header failed"
+sync
+
+# Leave the app where it is easy to find (Magisk's script unmounted /data)
+mount /data 2>/dev/null
+mkdir -p /data/media/0/ROMS 2>/dev/null && cp -f $APK /data/media/0/ROMS/Magisk.apk 2>/dev/null
+
+cd /
+rm -rf $WORK
+ui_print "- Done. After booting, install /sdcard/ROMS/Magisk.apk"
+ui_print "  Flashing a new ROM build removes Magisk: flash this zip again"
+exit 0
