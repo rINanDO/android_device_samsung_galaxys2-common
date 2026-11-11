@@ -165,10 +165,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.adb.nonblocking_ffs=false
 
-# Don't swapoff zram on shutdown, it takes minutes on this kernel
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.init.shutdown.skip_zram_swapoff=true
-
 # Audio Packages
 PRODUCT_PACKAGES += \
     android.hardware.audio@7.0-impl \
