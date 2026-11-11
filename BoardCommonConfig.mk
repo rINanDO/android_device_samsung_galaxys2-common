@@ -119,6 +119,13 @@ BOARD_HARDWARE_CLASS := hardware/samsung/lineagehw \
 # Graphics
 BOARD_EGL_CFG := device/samsung/galaxys2-common/configs/egl.cfg
 USE_OPENGL_RENDERER := true
+
+# libui only loads the HIDL gralloc 2.0 mapper/allocator when this is set
+$(call soong_config_set_bool,libui,legacy_gralloc,true)
+
+# The 3.0 kernel has no DMA-BUF heaps, so Codec2 allocates through ION;
+# libion is a no-op stub unless the legacy implementation is selected
+$(call soong_config_set_bool,libion,legacy_impl,true)
 TARGET_RUNNING_WITHOUT_SYNC_FRAMEWORK := true
 
 # FIMG Acceleration
