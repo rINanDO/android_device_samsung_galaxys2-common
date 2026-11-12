@@ -1,6 +1,6 @@
 # Audio
 ro.config.media_vol_steps=25
-ro.config.vc_call_vol_steps=4
+ro.config.vc_call_vol_steps=5
 
 # Bluetooth
 bluetooth.device.class_of_device=90,2,12
