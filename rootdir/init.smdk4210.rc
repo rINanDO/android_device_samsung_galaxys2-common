@@ -83,6 +83,12 @@ on post-fs-data
     chown system root /data/.mac.info
     chmod 0664 /data/.mac.info
 
+    # Files that init creates in /data get system_data_file; the Wi-Fi
+    # driver opens them from netd, which may only use wifi_data_file.
+    restorecon /data/.psm.info
+    restorecon /data/.wifiver.info
+    restorecon /data/.mac.info
+
     #Added drm folder to copy drm plugins
     mkdir /system/lib/drm 0775
     chown root root /system/lib/drm

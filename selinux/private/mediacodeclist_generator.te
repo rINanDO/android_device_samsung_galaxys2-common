@@ -1,0 +1,2 @@
+# Reads media.stagefright.* properties while it lists the codecs.
+get_prop(mediacodeclist_generator, media_config_prop)

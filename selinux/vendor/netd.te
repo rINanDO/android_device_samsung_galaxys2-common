@@ -4,3 +4,9 @@ allow netd sysfs_rmnet:file { open write };
 allow netd device:file { open write };
 allow netd hal_gnss_default:fd use;
 allow netd hal_gnss_default:tcp_socket { getopt read setopt write };
+# The bcmdhd driver reads and writes /data/.psm.info, .wifiver.info and
+# .mac.info while netd brings wlan0 up.
+allow netd wifi_data_file:file { getattr open read write };
+# After that it copies the chip's MAC to /efs/wifi/.mac.info as well; /efs
+# holds the factory data, so keep netd out of it.
+dontaudit netd efs_device_file:dir search;
