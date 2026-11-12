@@ -315,6 +315,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     config.disable_atlas=true
 
+# Allow installing apps that target an SDK below 24 (frameworks_base patch);
+# many apps for this phone are that old. A value set with setprop
+# (persisted in /data) overrides this default.
+PRODUCT_SYSTEM_PROPERTIES += \
+    persist.debug.pm.allow_low_target_sdk=1
+
 # F2FS Filesystem
 PRODUCT_PACKAGES += \
     fsck.f2fs
