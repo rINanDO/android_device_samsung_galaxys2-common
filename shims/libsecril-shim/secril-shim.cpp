@@ -342,6 +342,33 @@ static RIL_RadioState onStateRequestShim() {
     return newRadioState;
 }
 
+/*
+ * The Samsung RIL only knows how to configure IPv4 data calls. When the APN
+ * asks for IPV4V6 the network grants a dual-stack context, the RIL fails with
+ * "set_channel_addresses() error: pdp type is not supported" and leaves the
+ * PDP context defined, so every retry is then rejected by the modem until a
+ * reboot. Always request a plain IPv4 context instead.
+ */
+static void onRequestSetupDataCall(int request, void *data, size_t datalen, RIL_Token t)
+{
+	static const size_t PROTOCOL_INDEX = 6;
+	static char protocolIp[] = "IP";
+	char **params = (char **) data;
+	size_t count = datalen / sizeof(char *);
+
+	if (params == NULL || count <= PROTOCOL_INDEX || params[PROTOCOL_INDEX] == NULL ||
+			strcmp(params[PROTOCOL_INDEX], "IP") == 0) {
+		origRilFunctions->onRequest(request, data, datalen, t);
+		return;
+	}
+
+	char *newParams[count];
+	memcpy(newParams, params, count * sizeof(char *));
+	RLOGI("%s: requesting protocol IP instead of %s\n", __FUNCTION__, params[PROTOCOL_INDEX]);
+	newParams[PROTOCOL_INDEX] = protocolIp;
+	origRilFunctions->onRequest(request, newParams, datalen, t);
+}
+
 static void onRequestShim(int request, void *data, size_t datalen, RIL_Token t)
 {
 	RLOGD("%s:\t\t\t\t\t>>> REQUEST\t\t\t: %s: data:%p datalen:%d token:%p\n", __FUNCTION__, requestToString(request), data, datalen, t);
@@ -371,6 +398,9 @@ static void onRequestShim(int request, void *data, size_t datalen, RIL_Token t)
 			}
 			break;
 
+		case RIL_REQUEST_SETUP_DATA_CALL:
+			onRequestSetupDataCall(request, data, datalen, t);
+			return;
 		/* Necessary; RILJ may fake this for us if we reply not supported, but we can just implement it. */
 		case RIL_REQUEST_GET_RADIO_CAPABILITY:
 			onRequestGetRadioCapability(t);
