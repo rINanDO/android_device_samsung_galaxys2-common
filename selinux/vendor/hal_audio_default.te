@@ -1,3 +1,7 @@
 allow hal_audio_default rild:unix_stream_socket { connectto read write };
 allow hal_audio_default same_process_hal_file:file execmod;
 allow hal_audio_default default_android_vndservice:service_manager { find };
+
+# libsecril-client takes its wake lock through /sys/power/wake_lock
+allow hal_audio_default sysfs_wake_lock:file rw_file_perms;
+allow hal_audio_default self:global_capability2_class_set block_suspend;
