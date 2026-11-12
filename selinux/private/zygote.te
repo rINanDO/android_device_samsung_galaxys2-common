@@ -1,0 +1,4 @@
+# With Magisk's Zygisk, zygote reads properties through Magisk's copy of the
+# property code, which tries to open each property area read-write before
+# it falls back to read-only. Keep zygote read-only and don't log it.
+dontaudit zygote properties_serial:file write;
