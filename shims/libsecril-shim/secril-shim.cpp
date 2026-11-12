@@ -498,6 +498,11 @@ static void onRequestShim(int request, void *data, size_t datalen, RIL_Token t)
 		case RIL_REQUEST_START_LCE:
 		case RIL_REQUEST_STOP_LCE:
 		case RIL_REQUEST_PULL_LCEDATA:
+		/* The Samsung RIL never answers these: no IMS, LTE attach, cell info rate or CDMA. */
+		case RIL_REQUEST_IMS_REGISTRATION_STATE:
+		case RIL_REQUEST_SET_INITIAL_ATTACH_APN:
+		case RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE:
+		case RIL_REQUEST_CDMA_SET_BROADCAST_SMS_CONFIG:
 			if (!onRequestSpoofUnsupportedRequest(request, data, datalen, t)) {
 				onRequestUnsupportedRequest(request, t);
 			}
