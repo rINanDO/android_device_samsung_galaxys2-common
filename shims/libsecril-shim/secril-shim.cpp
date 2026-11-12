@@ -609,7 +609,7 @@ static void fixupDataCallList(void *response, size_t responselen) {
 		p_cur[i].gateways = p_cur[i].addresses;
 }
 
-static void fixupSignalStrength(void *response) {
+static void fixupSignalStrength(void *response, size_t responselen) {
 	int gsmSignalStrength;
 
 	RIL_SignalStrength_v10 *p_cur = ((RIL_SignalStrength_v10 *) response);
@@ -620,17 +620,33 @@ static void fixupSignalStrength(void *response) {
 		(gsmSignalStrength > 31 && p_cur->GW_SignalStrength.signalStrength != 99)) {
 		gsmSignalStrength = p_cur->CDMA_SignalStrength.dbm;
 	}
+	if (gsmSignalStrength < 0 || (gsmSignalStrength > 31 && gsmSignalStrength != 99))
+		gsmSignalStrength = 99;
 
 	/* Fix GSM signal strength */
 	p_cur->GW_SignalStrength.signalStrength = gsmSignalStrength;
 	gwSignalStrength = gsmSignalStrength;
 	gwBitErrorRate = p_cur->GW_SignalStrength.bitErrorRate;
 
+	/*
+	 * The RIL copies the GSM signal level (asu) into the CDMA and EVDO dBm
+	 * fields. Telephony reads them as a valid CDMA signal of -asu dBm and
+	 * picks it as the primary signal strength. This is a GSM/WCDMA-only
+	 * modem: mark them unavailable.
+	 */
+	p_cur->CDMA_SignalStrength.dbm = INT_MAX;
+	p_cur->CDMA_SignalStrength.ecio = INT_MAX;
+	p_cur->EVDO_SignalStrength.dbm = INT_MAX;
+	p_cur->EVDO_SignalStrength.ecio = INT_MAX;
+	p_cur->EVDO_SignalStrength.signalNoiseRatio = -1;
+
 	/* We don't support LTE - values should be set to INT_MAX */
-	p_cur->LTE_SignalStrength.cqi = INT_MAX;
-	p_cur->LTE_SignalStrength.rsrp = INT_MAX;
-	p_cur->LTE_SignalStrength.rsrq = INT_MAX;
-	p_cur->LTE_SignalStrength.rssnr = INT_MAX;
+	if (responselen >= sizeof(RIL_SignalStrength_v6)) {
+		p_cur->LTE_SignalStrength.cqi = INT_MAX;
+		p_cur->LTE_SignalStrength.rsrp = INT_MAX;
+		p_cur->LTE_SignalStrength.rsrq = INT_MAX;
+		p_cur->LTE_SignalStrength.rssnr = INT_MAX;
+	}
 }
 
 static void onRequestCompleteShim(RIL_Token t, RIL_Errno e, void *response, size_t responselen) {
@@ -696,7 +712,7 @@ static void onRequestCompleteShim(RIL_Token t, RIL_Errno e, void *response, size
 		case RIL_REQUEST_SIGNAL_STRENGTH:
 			/* The Samsung RIL reports the signal strength in a strange way... */
 			if (response != NULL && responselen >= sizeof(RIL_SignalStrength_v5)) {
-				fixupSignalStrength(response);
+				fixupSignalStrength(response, responselen);
 				rilEnv->OnRequestComplete(t, e, response, responselen);
 				return;
 			}
@@ -722,7 +738,7 @@ static void onUnsolicitedResponseShim(int unsolResponse, const void *data, size_
 		case RIL_UNSOL_SIGNAL_STRENGTH:
 			/* The Samsung RIL reports the signal strength in a strange way... */
 			if (data != NULL && datalen >= sizeof(RIL_SignalStrength_v5))
-				fixupSignalStrength((void*) data);
+				fixupSignalStrength((void*) data, datalen);
 			break;
 	}
 
