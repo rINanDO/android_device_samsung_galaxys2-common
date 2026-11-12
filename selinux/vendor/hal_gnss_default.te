@@ -6,13 +6,14 @@ allow hal_gnss_default sysfs:file { open read write };
 allow hal_gnss_default system_data_file:file { create getattr open read write };
 allow hal_gnss_default system_data_file:dir { add_name write };
 allow hal_gnss_default same_process_hal_file:file execmod;
-allow hal_gnss_default vndbinder_device:chr_file { ioctl open read write };
 allow hal_gnss_default appdomain:{ tcp_socket udp_socket } { getattr getopt setopt read write shutdown };
 allow hal_gnss_default dnsproxyd_socket:sock_file write;
 allow hal_gnss_default port:tcp_socket name_connect;
 allow hal_gnss_default self:capability net_raw;
 allow hal_gnss_default self:tcp_socket { connect create getopt setopt read write shutdown };
-# allow hal_gnss_default system_suspend:binder call;
 allow hal_gnss_default system_data_root_file:dir { add_name write };
 allow hal_gnss_default system_data_root_file:file { create getattr open read write };
-vndbinder_use(hal_gnss_default)
+# Wakelocks while a fix is running (libpower -> ISystemSuspend)
+wakelock_use(hal_gnss_default)
+# The GPS library looks for Samsung factory test files in /data/data
+dontaudit hal_gnss_default system_data_file:dir search;
