@@ -40,10 +40,45 @@ static bool onRequestSpoofUnsupportedRequest(int request, void *data, size_t dat
 static void onRequestDeviceIdentity(int request, RIL_Token t);
 
 
-/* Response data for RIL_REQUEST_GET_CELL_INFO_LIST */
-static RIL_CellInfo_v12 cellInfoWCDMA;
-static RIL_CellInfo_v12 cellInfoGSM;
-static RIL_CellInfo_v12 cellInfoList[2];
+/*
+ * The Samsung RIL leaves the radio technology of the voice registration empty
+ * and has no RIL_REQUEST_GET_CELL_INFO_LIST. Both are derived from the data
+ * registration, which reports the real radio technology (GPRS/EDGE on a 2G
+ * cell, UMTS/HSPA on a 3G cell).
+ */
+static int dataRadioTech = RADIO_TECH_UNKNOWN;
+
+/* Serving cell from the registration state responses, -1 if unknown */
+static int servingLac = -1;
+static int servingCid = -1;
+
+/* Last GSM/WCDMA signal strength, 99 if unknown */
+static int gwSignalStrength = 99;
+static int gwBitErrorRate = 99;
+
+static bool isGsmRadioTech(int radioTech) {
+	return radioTech == RADIO_TECH_GPRS || radioTech == RADIO_TECH_EDGE ||
+		radioTech == RADIO_TECH_GSM;
+}
+
+static bool isWcdmaRadioTech(int radioTech) {
+	return radioTech == RADIO_TECH_UMTS || radioTech == RADIO_TECH_HSDPA ||
+		radioTech == RADIO_TECH_HSUPA || radioTech == RADIO_TECH_HSPA ||
+		radioTech == RADIO_TECH_HSPAP;
+}
+
+/* LAC and CID are hex strings in the registration state responses */
+static int parseHexString(const char *s) {
+	char *end;
+	long value;
+
+	if (s == NULL || *s == '\0')
+		return -1;
+	value = strtol(s, &end, 16);
+	if (*end != '\0' || value < 0 || value > INT_MAX)
+		return -1;
+	return (int) value;
+}
 
 static RIL_Dial dial;
 
@@ -92,23 +127,47 @@ static void OnRequestGetCellInfoList(int request, void *data, size_t datalen, RI
 		requestToString(request),
 		data, datalen);
 
-	cellInfoWCDMA.cellInfoType = RIL_CELL_INFO_TYPE_WCDMA;
-	cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.mcc = -1;
-	cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.mnc = -1;
-	cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.psc = -1;
+	/* Report the registered cell only, as a GSM or a WCDMA cell */
+	static RIL_CellInfo_v12 cellInfo;
 
-	cellInfoGSM.cellInfoType = RIL_CELL_INFO_TYPE_GSM;
-	cellInfoGSM.CellInfo.gsm.cellIdentityGsm.mcc = -1;
-	cellInfoGSM.CellInfo.gsm.cellIdentityGsm.mnc = -1;
-
-	if (cellInfoGSM.CellInfo.gsm.cellIdentityGsm.lac > -1 &&
-	    cellInfoGSM.CellInfo.gsm.cellIdentityGsm.cid > -1) {
-		cellInfoList[0] = cellInfoGSM;
-		cellInfoList[1] = cellInfoWCDMA;
-		rilEnv->OnRequestComplete(t, RIL_E_SUCCESS, &cellInfoList, sizeof(cellInfoList));
-	} else {
-		rilEnv->OnRequestComplete(t, RIL_E_SUCCESS, &cellInfoWCDMA, sizeof(cellInfoWCDMA));
+	if (servingLac < 0 || servingCid < 0 ||
+	    (!isGsmRadioTech(dataRadioTech) && !isWcdmaRadioTech(dataRadioTech))) {
+		rilEnv->OnRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+		return;
 	}
+
+	memset(&cellInfo, 0, sizeof(cellInfo));
+	cellInfo.registered = 1;
+	cellInfo.timeStampType = RIL_TIMESTAMP_TYPE_OEM_RIL;
+
+	if (isGsmRadioTech(dataRadioTech)) {
+		RIL_CellInfoGsm_v12 *gsm = &cellInfo.CellInfo.gsm;
+
+		cellInfo.cellInfoType = RIL_CELL_INFO_TYPE_GSM;
+		gsm->cellIdentityGsm.mcc = -1;
+		gsm->cellIdentityGsm.mnc = -1;
+		gsm->cellIdentityGsm.lac = servingLac;
+		gsm->cellIdentityGsm.cid = servingCid;
+		gsm->cellIdentityGsm.arfcn = INT_MAX;
+		gsm->cellIdentityGsm.bsic = 0xFF;
+		gsm->signalStrengthGsm.signalStrength = gwSignalStrength;
+		gsm->signalStrengthGsm.bitErrorRate = gwBitErrorRate;
+		gsm->signalStrengthGsm.timingAdvance = INT_MAX;
+	} else {
+		RIL_CellInfoWcdma_v12 *wcdma = &cellInfo.CellInfo.wcdma;
+
+		cellInfo.cellInfoType = RIL_CELL_INFO_TYPE_WCDMA;
+		wcdma->cellIdentityWcdma.mcc = -1;
+		wcdma->cellIdentityWcdma.mnc = -1;
+		wcdma->cellIdentityWcdma.lac = servingLac;
+		wcdma->cellIdentityWcdma.cid = servingCid;
+		wcdma->cellIdentityWcdma.psc = INT_MAX;
+		wcdma->cellIdentityWcdma.uarfcn = INT_MAX;
+		wcdma->signalStrengthWcdma.signalStrength = gwSignalStrength;
+		wcdma->signalStrengthWcdma.bitErrorRate = gwBitErrorRate;
+	}
+
+	rilEnv->OnRequestComplete(t, RIL_E_SUCCESS, &cellInfo, sizeof(cellInfo));
 }
 
 static void onRequestVoiceRadioTech(int request, void *data, size_t datalen, RIL_Token t) {
@@ -469,29 +528,28 @@ static void onCompleteRequestGetSimStatus(RIL_Token t, RIL_Errno e, void *respon
 }
 
 static void onRequestCompleteVoiceRegistrationState(RIL_Token t, RIL_Errno e, void *response, size_t responselen) {
+	static char radioTechUmts[] = "3";
+	static char radioTechGsm[] = "16";
 	char **resp = (char **) response;
-        char radioTechUmts = '3';
-	memset(voiceRegStateResponse, 0, VOICE_REGSTATE_SIZE);
-	for (int index = 0; index < (int)responselen; index++) {
-		voiceRegStateResponse[index] = resp[index];
-		switch (index) {
-			case 1: {
-				cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.lac = atoi(voiceRegStateResponse[index]);
-				break;
-			}
-			case 2: {
-				cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.cid = atoi(voiceRegStateResponse[index]);
-				break;
-			}
-			case 3:	{
-			        // Add RADIO_TECH_UMTS because our RIL doesn't provide this here
-				voiceRegStateResponse[index] = &radioTechUmts;
-				break;
-		        }
-			default:
-				break;
+	size_t count = responselen / sizeof(char *);
+
+	memset(voiceRegStateResponse, 0, sizeof(voiceRegStateResponse));
+	memcpy(voiceRegStateResponse, resp, count * sizeof(char *));
+
+	if (count > 2) {
+		int lac = parseHexString(resp[1]);
+		int cid = parseHexString(resp[2]);
+
+		if (lac >= 0 && cid >= 0) {
+			servingLac = lac;
+			servingCid = cid;
 		}
 	}
+
+	/* Our RIL doesn't provide the radio technology here: voice uses the same cell as data */
+	if (count <= 3 || resp[3] == NULL || resp[3][0] == '\0')
+		voiceRegStateResponse[3] = isGsmRadioTech(dataRadioTech) ? radioTechGsm : radioTechUmts;
+
 	rilEnv->OnRequestComplete(t, e, voiceRegStateResponse, VOICE_REGSTATE_SIZE);
 }
 
@@ -499,31 +557,28 @@ static void onRequestCompleteDataRegistrationState(RIL_Token t, RIL_Errno e, voi
 	char **resp = (char **) response;
 	int length = (int)responselen/ sizeof(char *);
 
-	if (length >= 4) {
-		/* Gather Cellidentity data for RIL_REQUEST_GET_CELL_INFO_LIST */
-		switch (atoi(resp[3])) {
-			case RIL_CELL_INFO_TYPE_GSM: {
-				RLOGI("%s: RIL_CELL_INFO_TYPE_GSM: lac:%s cid:%s \n",
-					__FUNCTION__,
-					resp[1],
-					resp[2]);
-				cellInfoGSM.CellInfo.gsm.cellIdentityGsm.lac = atoi(resp[1]);
-				cellInfoGSM.CellInfo.gsm.cellIdentityGsm.cid = atoi(resp[2]);
-				break;
+	if (e == RIL_E_SUCCESS && resp != NULL && length >= 4 && resp[3] != NULL) {
+		/* resp[3] is the radio technology, not a RIL_CellInfoType */
+		int radioTech = atoi(resp[3]);
+
+		if (isGsmRadioTech(radioTech) || isWcdmaRadioTech(radioTech)) {
+			bool wasGsm = isGsmRadioTech(dataRadioTech);
+			int lac = parseHexString(resp[1]);
+			int cid = parseHexString(resp[2]);
+
+			if (lac >= 0 && cid >= 0) {
+				servingLac = lac;
+				servingCid = cid;
 			}
-			case RIL_CELL_INFO_TYPE_WCDMA: {
-				RLOGI("%s: RIL_CELL_INFO_TYPE_WCDMA: lac:%s cid:%s \n",
-					__FUNCTION__,
-					resp[1],
-					resp[2]);
-				cellInfoGSM.CellInfo.gsm.cellIdentityGsm.lac = -1;
-				cellInfoGSM.CellInfo.gsm.cellIdentityGsm.cid = -1;
-				cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.lac = atoi(resp[1]);
-				cellInfoWCDMA.CellInfo.wcdma.cellIdentityWcdma.cid = atoi(resp[2]);
-				break;
-			}
-			default:
-				break;
+			if (radioTech != dataRadioTech)
+				RLOGI("%s: radio technology %d, lac:%s cid:%s\n", __FUNCTION__,
+					radioTech, resp[1], resp[2]);
+			dataRadioTech = radioTech;
+
+			/* Let telephony poll the voice registration again with the new technology */
+			if (wasGsm != isGsmRadioTech(radioTech))
+				rilEnv->OnUnsolicitedResponse(RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED,
+					NULL, 0);
 		}
 	}
 	rilEnv->OnRequestComplete(t, e, response, responselen);
@@ -568,6 +623,8 @@ static void fixupSignalStrength(void *response) {
 
 	/* Fix GSM signal strength */
 	p_cur->GW_SignalStrength.signalStrength = gsmSignalStrength;
+	gwSignalStrength = gsmSignalStrength;
+	gwBitErrorRate = p_cur->GW_SignalStrength.bitErrorRate;
 
 	/* We don't support LTE - values should be set to INT_MAX */
 	p_cur->LTE_SignalStrength.cqi = INT_MAX;
