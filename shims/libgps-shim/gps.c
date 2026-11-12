@@ -21,6 +21,7 @@
 
 #include <dlfcn.h>
 #include <errno.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,6 +32,7 @@
 // Speed conversion km/h to gps speed-value
 #define SPEED_CONVERT 0.2728
 
+// locdiff: the horizontal distance in metres that counts as movement
 static const GpsFilterLocation defaultFilterLocation = { 10, true, 1.0f, 5, 60000 };
 
 static const GpsFilterLocation gpsFilterLocations[] = {
@@ -54,6 +56,17 @@ static GpsFilterLocation get_filterlocation(float accuracy) {
 }
 
 static GpsLocation reportLocation;
+
+// Horizontal distance in metres between two fixes. The fixes are close
+// together, so an equirectangular approximation is accurate enough.
+static double distance_m(const GpsLocation* a, const GpsLocation* b) {
+    const double earth_radius_m = 6371000.0;
+    const double deg_to_rad = M_PI / 180.0;
+    double dlat = (a->latitude - b->latitude) * deg_to_rad;
+    double dlon = (a->longitude - b->longitude) * deg_to_rad *
+            cos((a->latitude + b->latitude) / 2 * deg_to_rad);
+    return earth_radius_m * sqrt(dlat * dlat + dlon * dlon);
+}
 
 static GpsCallbacks_vendor vendor_gpsCallbacks;
 
@@ -137,14 +150,12 @@ static void copyGpsLocation(GpsLocation source, GpsLocation *target) {
 }
 
 static void shim_location_cb(GpsLocation* location) {
-    ALOGD("%s: vendor-data: speed:%f km/h latitude=%f longitude=%f altitude=%f speed=%f bearing=%f accuracy=%f timestamp:%lu",
+    // No position, altitude or bearing in the log: logcat is readable by
+    // apps with READ_LOGS and ends up in bug reports.
+    ALOGD("%s: vendor-data: flags:%x speed:%f km/h accuracy=%f timestamp:%lu",
         __func__,
+        location->flags,
         location->speed / SPEED_CONVERT,
-        location->latitude,
-        location->longitude,
-        location->altitude,
-        location->speed,
-        location->bearing,
         location->accuracy,
         location->timestamp);
 
@@ -167,14 +178,11 @@ static void shim_location_cb(GpsLocation* location) {
     }
 
     bool updateLocation = false;
-    float locDiff =
-            (location->latitude - reportLocation.latitude) +
-            (location->longitude - reportLocation.longitude) +
-            (location->altitude - reportLocation.altitude);
+    // Altitude is left out: it is the noisiest part of a fix
+    double locDiff = distance_m(location, &reportLocation);
     bool changedFlags = (location->flags != reportLocation.flags);
     bool hasSpeed = (location->speed > filterLocation.speed * SPEED_CONVERT);
-    bool hasMovement = (locDiff > filterLocation.locdiff ||
-			 locDiff < -filterLocation.locdiff);
+    bool hasMovement = (locDiff > filterLocation.locdiff);
     bool hasTimedout = (location->timestamp > reportLocation.timestamp + filterLocation.timeout);
 
     // Determine if we are moving
@@ -182,16 +190,6 @@ static void shim_location_cb(GpsLocation* location) {
         changedFlags || hasSpeed || hasMovement || hasTimedout;
 
     if (updateLocation) {
-        ALOGD("%s: FilterLocations: flags:%x speed:%.1f km/h locdiff:%f acc:%.0f m - Moving because of [%s,%s,%s,%s].",
-            __func__,
-            location->flags,
-            location->speed / SPEED_CONVERT,
-            locDiff,
-            location->accuracy,
-            hasSpeed ? "flags" : "",
-            hasSpeed ? "speed" : "",
-            hasMovement ? "movement" : "",
-            hasTimedout ? "timeout":"");
         // Update location because we are moving
         reportLocation.size = location->size;
         reportLocation.flags = location->flags;
@@ -322,15 +320,9 @@ static void shim_agpsril_set_ref_location(const AGpsRefLocation *agps_reflocatio
 	vendor_ref.u.cellID.psc = 65535;
 	vendor_ref.u.cellID.cid = agps_reflocation->u.cellID.cid;
 	vendor_ref.u.mac = agps_reflocation->u.mac;
-	ALOGD("%s: Executing vendor_agpsril_set_ref_location= > type:%d mcc:%d mnc:%d lac:%d psc:%d cid:%d mac:%d",
-		__func__,
-		vendor_ref.u.cellID.type,
-		vendor_ref.u.cellID.mcc,
-		vendor_ref.u.cellID.mnc,
-		vendor_ref.u.cellID.lac,
-		vendor_ref.u.cellID.psc,
-		vendor_ref.u.cellID.cid,
-		vendor_ref.u.mac);
+	// The cell (mcc/mnc/lac/cid) gives away the location: don't log it
+	ALOGD("%s: Executing vendor_agpsril_set_ref_location= > type:%d",
+		__func__, vendor_ref.u.cellID.type);
 	vendor_agpsril_set_ref_location(&vendor_ref, sizeof(AGpsRefLocation_vendor));
 }
 
@@ -446,8 +438,7 @@ static int shim_gps_inject_time(GpsUtcTime time, int64_t timeReference,
 }
 
 static int shim_gps_inject_location(double latitude, double longitude, float accuracy) {
-	ALOGD("%s: latitude:%f longitude:%f accuracy:%f", __func__,
-		latitude, longitude, accuracy);
+	ALOGD("%s: accuracy:%f", __func__, accuracy);
 	int result = vendor_gps_inject_location(latitude, longitude, accuracy);
 	ALOGD("%s: result:%d", __func__, result);
 	return result;
