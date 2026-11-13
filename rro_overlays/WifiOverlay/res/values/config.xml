@@ -34,4 +34,10 @@
          available. Scan from the framework while the screen is off instead,
          so Wi-Fi still connects when the screen is off. -->
     <bool translatable="false" name="config_wifiSwPnoEnabled">true</bool>
+
+    <!-- The BCM4330 firmware has no Neighbor Discovery offload, so every
+         neighbor solicitation wakes the device. Some routers send one for
+         each IPv6 address every few seconds, which kept the device from
+         sleeping. Use IPv4 only on Wi-Fi. -->
+    <bool translatable="false" name="config_wifiDisableIpv6">true</bool>
 </resources>
