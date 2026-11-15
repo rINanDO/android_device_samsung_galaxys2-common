@@ -20,8 +20,4 @@
     <bool name="def_bluetooth_on">false</bool>
     <bool name="def_screen_brightness_automatic_mode">true</bool>
     <integer name="def_screen_off_timeout">120000</integer>
-
-    <!-- Set animation disabled by default  -->
-    <fraction name="def_window_animation_scale">50%</fraction>
-    <fraction name="def_window_transition_scale">50%</fraction>
 </resources>
