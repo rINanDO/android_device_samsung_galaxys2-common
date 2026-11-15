@@ -13,6 +13,10 @@ on init
 
 on fs
     mount_all /fstab.smdk4210
+# fs_mgr opens max_comp_streams read-only, so the fstab option never applies.
+# It must be set before swapon_all sets disksize: one stream at init selects
+# the single-stream backend, which can't be changed later.
+    write /sys/block/zram0/max_comp_streams 2
     swapon_all /fstab.smdk4210
 
     mkdir /efs/bluetooth
