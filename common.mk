@@ -411,11 +411,12 @@ $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
 # Compile the boot image for it, with read barriers
 PRODUCT_ENABLE_UFFD_GC := false
 
-# Compiling fully at install time makes installs slow, and user-installed apps
-# ship without a profile, so speed-profile wouldn't help them. Install quickly
-# and let background dexopt compile them fully when the phone is idle.
+# Compiling at install time makes installs slow. Install quickly and let
+# background dexopt compile the hot code from the profile ART records while
+# an app runs. Full speed compiles of large apps waste storage, page cache
+# and compile time on a 1 GB phone.
 PRODUCT_SYSTEM_PROPERTIES += \
-    pm.dexopt.bg-dexopt=speed \
+    pm.dexopt.bg-dexopt=speed-profile \
     pm.dexopt.install=verify \
     pm.dexopt.install-bulk=verify
 
