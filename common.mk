@@ -307,6 +307,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.vendor.qti.sys.fw.trim_cache_percent=100 \
     ro.vendor.qti.sys.fw.empty_app_percent=25
 
+# HWUI frees an app's GPU context 5 s after all its windows stop, also for
+# foreground service apps such as a music player in the background, and
+# keeps smaller GPU caches. Mali memory can't be swapped.
+PRODUCT_SYSTEM_PROPERTIES += \
+    debug.hwui.app_memory_policy=extremelowram
+
 # Reduces GC frequency of foreground apps by 50%
 PRODUCT_PROPERTY_OVERRIDES += \
     dalvik.vm.foreground-heap-growth-multiplier=2.0
