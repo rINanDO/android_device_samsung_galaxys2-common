@@ -19,10 +19,16 @@ PRODUCT_BUILD_RECOVERY_IMAGE := true
 
 # Enable DM file pre-opting to reduce first boot time
 PRODUCT_DEX_PREOPT_GENERATE_DM_FILES := true
-# Compile the system apps fully on the build host. The A9 interprets and
-# JITs verify-only code slowly (janky Compose lists), and compiled code is
-# clean file-backed memory, unlike the JIT cache.
-PRODUCT_DEX_PREOPT_DEFAULT_COMPILER_FILTER := speed
+# Compile only the always-running apps fully on the build host. Fully
+# compiled apps are large (500 MB for all system apps, more than /system
+# holds), and a cold start of a large odex reads far more from the eMMC.
+# The other apps are verified, and background dexopt compiles the code
+# that is used (speed-profile).
+PRODUCT_DEX_PREOPT_DEFAULT_COMPILER_FILTER := verify
+PRODUCT_DEXPREOPT_SPEED_APPS += \
+    Launcher3QuickStepGo \
+    LineageSetupWizard \
+    SystemUI
 
 DONT_UNCOMPRESS_PRIV_APPS_DEXS := true
 
@@ -412,10 +418,6 @@ $(call inherit-product, build/make/target/product/go_defaults.mk)
 
 # Apply Dalvik config for 1G phone
 $(call inherit-product, frameworks/native/build/phone-xhdpi-1024-dalvik-heap.mk)
-
-# Linux 3.0 has no userfaultfd, so ART falls back to the CC collector.
-# Compile the boot image for it, with read barriers
-PRODUCT_ENABLE_UFFD_GC := false
 
 # Compiling at install time makes installs slow. Install quickly and let
 # background dexopt compile the hot code from the profile ART records while

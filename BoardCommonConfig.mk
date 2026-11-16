@@ -222,5 +222,11 @@ BOARD_CUSTOM_KERNEL_MK := device/samsung/galaxys2-common/shkernel.mk
 # Memfd
 $(call soong_config_set,art,has_memfd_backport,true)
 
+# Linux 3.0 has no userfaultfd, so ART runs the CC collector. Preopt the boot
+# image and the apps for it, with read barriers; ART rejects code compiled for
+# CMC. default_art_config.mk sets PRODUCT_ENABLE_UFFD_GC := true, which wins
+# over a product setting, so use the override.
+OVERRIDE_ENABLE_UFFD_GC := false
+
 # Use the non-open-source parts, if they're present
 -include vendor/samsung/galaxys2-common/BoardConfigVendor.mk
