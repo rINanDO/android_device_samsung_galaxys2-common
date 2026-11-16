@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <cutils/str_parms.h>
 #include <cutils/log.h>
@@ -42,6 +43,8 @@
 /*
  * Functions
  */
+
+void audio_out_pcm_close(struct tinyalsa_audio_stream_out *stream_out);
 
 int audio_out_pcm_open(struct tinyalsa_audio_stream_out *stream_out)
 {
@@ -67,6 +70,9 @@ int audio_out_pcm_open(struct tinyalsa_audio_stream_out *stream_out)
 	}
 	pcm_config.period_size = stream_out->mixer_props->period_size;
 	pcm_config.period_count = stream_out->mixer_props->period_count;
+
+	/* A rate or format change marks the stream standby with the device open */
+	audio_out_pcm_close(stream_out);
 
 	pcm = pcm_open(stream_out->mixer_props->card,
 		stream_out->mixer_props->device, PCM_OUT, &pcm_config);
@@ -235,7 +241,7 @@ int audio_out_write_process(struct tinyalsa_audio_stream_out *stream_out, void *
 
 		rc = pcm_write(stream_out->pcm, buffer_in, size_in);
 		if(rc != 0) {
-			ALOGE("pcm write failed!");
+			ALOGE("pcm write failed: %s", pcm_get_error(stream_out->pcm));
 			goto error;
 		}
 	}
@@ -542,7 +548,7 @@ static ssize_t audio_out_write(struct audio_stream_out *stream,
 
 	rc = audio_out_write_process(stream_out, (void *) buffer, (int) bytes);
 	if(rc < 0) {
-		ALOGE("Process and write failed!");
+		ALOGE("Process and write failed, reopening pcm device");
 		goto error;
 	}
 
@@ -551,9 +557,31 @@ static ssize_t audio_out_write(struct audio_stream_out *stream,
 	return bytes;
 
 error:
+	/*
+	 * A pcm device that failed once keeps failing, so close it and let the
+	 * next write open it again. Wait for as long as the buffer would have
+	 * played: failing at once lets the caller drain its data at full speed,
+	 * and players that follow the audio clock then run video too fast.
+	 */
+	audio_out_pcm_close(stream_out);
+#ifdef YAMAHA_MC1N2_AUDIO
+	if(!stream_out->standby) {
+		rc = yamaha_mc1n2_audio_output_stop(stream_out->device->mc1n2_pdata);
+		if(rc < 0) {
+			ALOGE("Failed to set Yamaha-MC1N2-Audio route");
+		}
+	}
+#endif
+	stream_out->standby = 1;
+
 	pthread_mutex_unlock(&stream_out->lock);
 
-	return -1;
+	if(stream_out->rate > 0)
+		usleep(bytes * 1000000LL /
+			audio_stream_frame_size((struct audio_stream *) stream_out) /
+			stream_out->rate);
+
+	return bytes;
 }
 
 static int audio_out_get_render_position(const struct audio_stream_out *stream,
