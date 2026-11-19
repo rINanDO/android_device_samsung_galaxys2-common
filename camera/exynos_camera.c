@@ -315,6 +315,9 @@ void exynos_camera_deinit(struct exynos_camera *exynos_camera)
 	if (exynos_camera == NULL || exynos_camera->config == NULL)
 		return;
 
+	if (exynos_camera->recording_enabled)
+		exynos_camera_recording_stop(exynos_camera);
+
 	exynos_v4l2_close(exynos_camera, 0);
 	exynos_v4l2_close(exynos_camera, 2);
 }
@@ -2118,13 +2121,6 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	void *preview_data;
 	void *window_data = NULL;
 
-	unsigned int recording_y_addr;
-	unsigned int recording_cbcr_addr;
-	nsecs_t timestamp;
-	struct exynos_camera_native_metadata *metadata;
-	native_handle_t *handle;
-	struct timespec ts;
-
 	int index;
 	int rc;
 	int i;
@@ -2141,8 +2137,6 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 		ALOGE("%s: exynos_camera->preview_window == NULL", __func__);
 		goto error;
 	}
-
-	timestamp = systemTime(1);
 
 	// V4L2
 	pthread_mutex_lock(&exynos_camera->preview_mutex);
@@ -2217,86 +2211,8 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 			exynos_camera->preview_memory, index, NULL, exynos_camera->callbacks.user);
 	}
 
-	// Recording
-
-	if (exynos_camera->recording_enabled && exynos_camera->recording_memory != NULL) {
-		// V4L2
-
-		/*
-		 * Don't hold recording_mutex while waiting: when every buffer is
-		 * out, the frame that ends the wait comes from a release, and
-		 * releasing takes the mutex.
-		 */
-		rc = exynos_v4l2_poll(exynos_camera, 2);
-		if (rc < 0) {
-			ALOGE("%s: poll failed!", __func__);
-			ALOGE("%s: Exiting with error", __func__);
-			return -1;
-		} else if (rc == 0) {
-			ALOGE("%s: poll timeout!", __func__);
-			ALOGE("%s: Exiting with error", __func__);
-			return -1;
-		}
-
-		pthread_mutex_lock(&exynos_camera->recording_mutex);
-
-		index = exynos_v4l2_dqbuf_cap(exynos_camera, 2);
-		if (index < 0) {
-			ALOGE("%s: dqbuf failed!", __func__);
-			goto error_recording;
-		}
-
-		recording_y_addr = exynos_v4l2_s_ctrl(exynos_camera, 2, V4L2_CID_PADDR_Y, index);
-		if (recording_y_addr == 0xffffffff) {
-			ALOGE("%s: s ctrl failed!", __func__);
-			goto error_recording;
-		}
-
-		recording_cbcr_addr = exynos_v4l2_s_ctrl(exynos_camera, 2, V4L2_CID_PADDR_CBCR, index);
-		if (recording_cbcr_addr == 0xffffffff) {
-			ALOGE("%s: s ctrl failed!", __func__);
-			goto error_recording;
-		}
-
-		if (index >= exynos_camera->recording_buffers_count ||
-			exynos_camera->recording_handles[index] == NULL) {
-			ALOGE("%s: invalid recording buffer %d", __func__, index);
-			goto error_recording;
-		}
-
-		handle = exynos_camera->recording_handles[index];
-		handle->data[EXYNOS_CAMERA_HANDLE_Y] = recording_y_addr;
-		handle->data[EXYNOS_CAMERA_HANDLE_CBCR] = recording_cbcr_addr;
-		handle->data[EXYNOS_CAMERA_HANDLE_INDEX] = index;
-
-		metadata = (struct exynos_camera_native_metadata *) exynos_camera->recording_memory->data;
-		metadata[index].type = EXYNOS_CAMERA_METADATA_NATIVE_HANDLE;
-		metadata[index].handle = handle;
-		exynos_camera->recording_inflight |= 1U << index;
-
-		pthread_mutex_unlock(&exynos_camera->recording_mutex);
-
-		if (EXYNOS_CAMERA_MSG_ENABLED(CAMERA_MSG_VIDEO_FRAME) && EXYNOS_CAMERA_CALLBACK_DEFINED(data_timestamp)) {
-			exynos_camera->callbacks.data_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME,
-				exynos_camera->recording_memory, index, exynos_camera->callbacks.user);
-		} else {
-			pthread_mutex_lock(&exynos_camera->recording_mutex);
-			exynos_camera->recording_inflight &= ~(1U << index);
-			rc = exynos_v4l2_qbuf_cap(exynos_camera, 2, index);
-			pthread_mutex_unlock(&exynos_camera->recording_mutex);
-			if (rc < 0) {
-				ALOGE("%s: qbuf failed!", __func__);
-				return -1;
-			}
-		}
-	}
-
 	return 0;
 
-error_recording:
-	pthread_mutex_unlock(&exynos_camera->recording_mutex);
-	ALOGE("%s: Exiting with error", __func__);
-	return -1;
 error:
 	pthread_mutex_unlock(&exynos_camera->preview_mutex);
 	ALOGE("%s: Exiting with error", __func__);
@@ -2599,6 +2515,14 @@ void exynos_camera_preview_stop(struct exynos_camera *exynos_camera)
 	exynos_camera->preview_failed = 0;
 	exynos_camera->preview_sensor_mode_changed = 0;
 
+	/*
+	 * The preview thread handles a recording stop request, but it may
+	 * have ended first. Don't leave the recording thread running.
+	 */
+	exynos_camera->recording_msg_stop = 0;
+	if (exynos_camera->recording_enabled)
+		exynos_camera_recording_stop(exynos_camera);
+
 	rc = exynos_v4l2_streamoff_cap(exynos_camera, 0);
 	if (rc < 0) {
 		ALOGE("%s: streamoff failed!", __func__);
@@ -2641,39 +2565,45 @@ void exynos_camera_recording_frame_release(struct exynos_camera *exynos_camera, 
 {
 	struct exynos_camera_native_metadata *metadata;
 	native_handle_t *handle;
-	unsigned int offset, index;
+	unsigned int offset, slot, index;
 	int rc;
+	int i;
 
 	if (exynos_camera == NULL || data == NULL || exynos_camera->recording_memory == NULL)
 		return;
 
 	offset = (unsigned int) ((char *) data - (char *) exynos_camera->recording_memory->data);
-	index = offset / sizeof(struct exynos_camera_native_metadata);
+	slot = offset / sizeof(struct exynos_camera_native_metadata);
 	if (offset % sizeof(struct exynos_camera_native_metadata) != 0 ||
-		index >= (unsigned int) exynos_camera->recording_buffers_count) {
+		slot >= (unsigned int) exynos_camera->recording_buffers_count) {
 		ALOGE("%s: unknown recording frame %p", __func__, data);
 		return;
 	}
 
 	/*
-	 * The camera service hands back frames in a different metadata slot
-	 * than the one they were delivered in, so the slot doesn't say which
-	 * buffer this is. The provider puts a clone of the returned handle in
-	 * the slot (ours to delete), and that handle carries the buffer index.
+	 * The camera service hands back frames in any free metadata slot, so
+	 * the slot doesn't say which buffer this is. The provider puts a clone
+	 * of the returned handle in the slot (ours to delete), and that handle
+	 * carries the buffer index.
 	 */
 	metadata = (struct exynos_camera_native_metadata *) data;
 	handle = metadata->handle;
-	metadata->handle = exynos_camera->recording_handles[index];
-	if (handle != NULL && handle != exynos_camera->recording_handles[index]) {
+	index = (unsigned int) -1;
+	for (i = 0; i < exynos_camera->recording_buffers_count; i++) {
+		if (handle == exynos_camera->recording_handles[i])
+			index = i;
+	}
+	if (handle != NULL && index == (unsigned int) -1) {
 		if (handle->numFds == 0 && handle->numInts >= EXYNOS_CAMERA_HANDLE_INTS)
 			index = (unsigned int) handle->data[EXYNOS_CAMERA_HANDLE_INDEX];
-		else
-			index = (unsigned int) -1;
 		native_handle_close(handle);
 		native_handle_delete(handle);
 	}
 
 	pthread_mutex_lock(&exynos_camera->recording_mutex);
+
+	// The service took this slot from its free list: it's ours again
+	exynos_camera->recording_slots_free |= 1U << slot;
 
 	if (index >= (unsigned int) exynos_camera->recording_buffers_count ||
 		!(exynos_camera->recording_inflight & (1U << index))) {
@@ -2690,6 +2620,134 @@ void exynos_camera_recording_frame_release(struct exynos_camera *exynos_camera, 
 
 error:
 	pthread_mutex_unlock(&exynos_camera->recording_mutex);
+}
+
+/*
+ * Recording frames come from FIMC2 in their own thread. Taking them in the
+ * preview loop tied the video frame rate to the preview: whenever the
+ * preview window was slow to hand out a buffer (GPU composition), the video
+ * dropped to the preview rate, and every frame got the time the preview
+ * loop started instead of the time it was captured.
+ */
+static int exynos_camera_recording_frame(struct exynos_camera *exynos_camera)
+{
+	struct exynos_camera_native_metadata *metadata;
+	unsigned int recording_y_addr;
+	unsigned int recording_cbcr_addr;
+	native_handle_t *handle;
+	nsecs_t timestamp;
+	unsigned int slot;
+	int index;
+	int rc;
+
+	/*
+	 * Don't hold recording_mutex while waiting: when every buffer is
+	 * out, the frame that ends the wait comes from a release, and
+	 * releasing takes the mutex.
+	 */
+	rc = exynos_v4l2_poll(exynos_camera, 2);
+	if (rc < 0) {
+		ALOGE("%s: poll failed!", __func__);
+		return -1;
+	} else if (rc == 0) {
+		// The encoder may still hold every buffer: keep waiting
+		ALOGE("%s: poll timeout!", __func__);
+		return 0;
+	}
+
+	pthread_mutex_lock(&exynos_camera->recording_mutex);
+
+	index = exynos_v4l2_dqbuf_cap(exynos_camera, 2);
+	timestamp = systemTime(SYSTEM_TIME_MONOTONIC);
+	if (index < 0) {
+		ALOGE("%s: dqbuf failed!", __func__);
+		goto error;
+	}
+
+	recording_y_addr = exynos_v4l2_s_ctrl(exynos_camera, 2, V4L2_CID_PADDR_Y, index);
+	if (recording_y_addr == 0xffffffff) {
+		ALOGE("%s: s ctrl failed!", __func__);
+		goto error;
+	}
+
+	recording_cbcr_addr = exynos_v4l2_s_ctrl(exynos_camera, 2, V4L2_CID_PADDR_CBCR, index);
+	if (recording_cbcr_addr == 0xffffffff) {
+		ALOGE("%s: s ctrl failed!", __func__);
+		goto error;
+	}
+
+	if (index >= exynos_camera->recording_buffers_count ||
+		exynos_camera->recording_handles[index] == NULL) {
+		ALOGE("%s: invalid recording buffer %d", __func__, index);
+		goto error;
+	}
+
+	/*
+	 * The metadata slots are shared with the camera service, which reads
+	 * a delivered frame's handle back out of its slot, and writes released
+	 * handles into slots on its free list. Deliver only in a slot the
+	 * service has handed back: a slot still on its free list could be
+	 * overwritten with another process' pointer while it is being read.
+	 */
+	if (exynos_camera->recording_slots_free == 0) {
+		ALOGE("%s: no free recording slot, dropping a frame", __func__);
+		rc = exynos_v4l2_qbuf_cap(exynos_camera, 2, index);
+		pthread_mutex_unlock(&exynos_camera->recording_mutex);
+		return rc < 0 ? -1 : 0;
+	}
+	slot = __builtin_ctz(exynos_camera->recording_slots_free);
+	exynos_camera->recording_slots_free &= ~(1U << slot);
+
+	handle = exynos_camera->recording_handles[index];
+	handle->data[EXYNOS_CAMERA_HANDLE_Y] = recording_y_addr;
+	handle->data[EXYNOS_CAMERA_HANDLE_CBCR] = recording_cbcr_addr;
+	handle->data[EXYNOS_CAMERA_HANDLE_INDEX] = index;
+
+	metadata = (struct exynos_camera_native_metadata *) exynos_camera->recording_memory->data;
+	metadata[slot].type = EXYNOS_CAMERA_METADATA_NATIVE_HANDLE;
+	metadata[slot].handle = handle;
+	exynos_camera->recording_inflight |= 1U << index;
+
+	pthread_mutex_unlock(&exynos_camera->recording_mutex);
+
+	if (EXYNOS_CAMERA_MSG_ENABLED(CAMERA_MSG_VIDEO_FRAME) && EXYNOS_CAMERA_CALLBACK_DEFINED(data_timestamp)) {
+		exynos_camera->callbacks.data_timestamp(timestamp, CAMERA_MSG_VIDEO_FRAME,
+			exynos_camera->recording_memory, slot, exynos_camera->callbacks.user);
+	} else {
+		pthread_mutex_lock(&exynos_camera->recording_mutex);
+		exynos_camera->recording_slots_free |= 1U << slot;
+		exynos_camera->recording_inflight &= ~(1U << index);
+		rc = exynos_v4l2_qbuf_cap(exynos_camera, 2, index);
+		pthread_mutex_unlock(&exynos_camera->recording_mutex);
+		if (rc < 0) {
+			ALOGE("%s: qbuf failed!", __func__);
+			return -1;
+		}
+	}
+
+	return 0;
+
+error:
+	pthread_mutex_unlock(&exynos_camera->recording_mutex);
+	return -1;
+}
+
+static void *exynos_camera_recording_thread(void *data)
+{
+	struct exynos_camera *exynos_camera = (struct exynos_camera *) data;
+
+	ALOGD("%s: Starting thread", __func__);
+
+	while (exynos_camera->recording_thread_running) {
+		if (exynos_camera_recording_frame(exynos_camera) < 0) {
+			ALOGE("%s: recording failed!", __func__);
+			break;
+		}
+	}
+
+	ALOGD("%s: Exiting thread", __func__);
+
+	return NULL;
 }
 
 int exynos_camera_recording_start(struct exynos_camera *exynos_camera)
@@ -2782,6 +2840,7 @@ int exynos_camera_recording_start(struct exynos_camera *exynos_camera)
 	}
 
 	exynos_camera->recording_inflight = 0;
+	exynos_camera->recording_slots_free = (1U << exynos_camera->recording_buffers_count) - 1;
 	for (i = 0; i < exynos_camera->recording_buffers_count; i++) {
 		rc = exynos_v4l2_qbuf_cap(exynos_camera, 2, i);
 		if (rc < 0) {
@@ -2831,6 +2890,16 @@ int exynos_camera_recording_start(struct exynos_camera *exynos_camera)
 	}
 	pthread_mutex_init(&exynos_camera->recording_mutex, NULL);
 
+	exynos_camera->recording_thread_running = 1;
+	rc = pthread_create(&exynos_camera->recording_thread, NULL,
+		exynos_camera_recording_thread, (void *) exynos_camera);
+	if (rc != 0) {
+		ALOGE("%s: Unable to create recording thread", __func__);
+		exynos_camera->recording_thread_running = 0;
+		pthread_mutex_destroy(&exynos_camera->recording_mutex);
+		goto error;
+	}
+
 	exynos_camera->recording_enabled = 1;
 
 	return 0;
@@ -2850,8 +2919,11 @@ void exynos_camera_recording_stop(struct exynos_camera *exynos_camera)
 		return;
 	}
 
-	//Disables the capture routine in exynos_camera_preview running in seperate thread.
 	exynos_camera->recording_enabled = 0;
+
+	// The thread wakes up within a poll timeout
+	exynos_camera->recording_thread_running = 0;
+	pthread_join(exynos_camera->recording_thread, NULL);
 
 	//Stop recording the stream.
 	rc = exynos_v4l2_streamoff_cap(exynos_camera, 2);

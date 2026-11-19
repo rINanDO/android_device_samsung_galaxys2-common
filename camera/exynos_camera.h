@@ -226,7 +226,9 @@ struct exynos_camera {
 	int preview_params_set;
 
 	// Recording
+	pthread_t recording_thread;
 	pthread_mutex_t recording_mutex;
+	int recording_thread_running;
 
 	int recording_enabled;
 	int recording_msg_start;
@@ -235,6 +237,7 @@ struct exynos_camera {
 	camera_memory_t *recording_memory;
 	native_handle_t *recording_handles[EXYNOS_CAMERA_MAX_BUFFERS_COUNT];
 	unsigned int recording_inflight;
+	unsigned int recording_slots_free;
 	int recording_buffers_count;
 
 	// Camera params
