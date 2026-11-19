@@ -21,8 +21,8 @@
      for different hardware and product builds. -->
 <resources>
 
-    <!-- Our amoled doesn't animate well. -->
-    <bool name="config_animateScreenLights">false</bool>
+    <!-- Fade with a black layer instead of the GPU-drawn ColorFade animation. -->
+    <bool name="config_animateScreenLights">true</bool>
 
     <integer name="config_deskDockKeepsScreenOn">0</integer>
     <integer name="config_carDockKeepsScreenOn">1</integer>
