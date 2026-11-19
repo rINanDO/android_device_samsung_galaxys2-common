@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <poll.h>
 
 #include <asm/types.h>
 #include <jpeg_api.h>
@@ -2122,6 +2123,7 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	void *window_data = NULL;
 
 	int index;
+	int fd;
 	int rc;
 	int i;
 
@@ -2161,11 +2163,33 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 		goto error;
 	}
 
-	rc = exynos_v4l2_qbuf_cap(exynos_camera, 0, index);
-	if (rc < 0) {
-		ALOGE("%s: qbuf failed!", __func__);
-		goto error;
+	/*
+	 * Show the newest frame: when the preview falls behind, frames pile
+	 * up, and the oldest one is several frames late. Give the older ones
+	 * straight back to FIMC0.
+	 */
+	fd = exynos_v4l2_find_fd(exynos_camera, 0);
+	while (fd >= 0) {
+		struct pollfd events = { .fd = fd, .events = POLLIN };
+		int newer;
+
+		if (poll(&events, 1, 0) <= 0 || !(events.revents & POLLIN))
+			break;
+		newer = exynos_v4l2_dqbuf_cap(exynos_camera, 0);
+		if (newer < 0 || newer >= exynos_camera->preview_buffers_count)
+			break;
+		rc = exynos_v4l2_qbuf_cap(exynos_camera, 0, index);
+		if (rc < 0) {
+			ALOGE("%s: qbuf failed!", __func__);
+			goto error;
+		}
+		index = newer;
 	}
+
+	/*
+	 * Keep the buffer until it has been copied: once it is queued again,
+	 * FIMC0 can write the next frame into it while it is being read.
+	 */
 
 	// Preview window
 
@@ -2182,8 +2206,9 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	// The window goes away when the client dies: drop this frame
 	if (rc != 0 || buffer == NULL) {
 		ALOGE("%s: Unable to dequeue preview buffer (%d)", __func__, rc);
+		rc = exynos_v4l2_qbuf_cap(exynos_camera, 0, index);
 		pthread_mutex_unlock(&exynos_camera->preview_mutex);
-		return 0;
+		return rc < 0 ? -1 : 0;
 	}
 
 	exynos_camera->gralloc->lock(exynos_camera->gralloc, *buffer, GRALLOC_USAGE_SW_WRITE_OFTEN,
@@ -2204,11 +2229,16 @@ int exynos_camera_preview(struct exynos_camera *exynos_camera)
 	exynos_camera->preview_window->enqueue_buffer(exynos_camera->preview_window,
 		buffer);
 
-	pthread_mutex_unlock(&exynos_camera->preview_mutex);
-
 	if (EXYNOS_CAMERA_MSG_ENABLED(CAMERA_MSG_PREVIEW_FRAME) && EXYNOS_CAMERA_CALLBACK_DEFINED(data)) {
 		exynos_camera->callbacks.data(CAMERA_MSG_PREVIEW_FRAME,
 			exynos_camera->preview_memory, index, NULL, exynos_camera->callbacks.user);
+	}
+
+	rc = exynos_v4l2_qbuf_cap(exynos_camera, 0, index);
+	pthread_mutex_unlock(&exynos_camera->preview_mutex);
+	if (rc < 0) {
+		ALOGE("%s: qbuf failed!", __func__);
+		return -1;
 	}
 
 	return 0;
