@@ -3,3 +3,7 @@ allow hal_camera_default mediaserver:binder { call transfer };
 allow hal_camera_default vndbinder_device:chr_file { ioctl open read write };
 allow hal_camera_default hal_graphics_mapper_hwservice:hwservice_manager find;
 vndbinder_use(hal_camera_default)
+
+# libui probes vndservicemanager for an AIDL graphics allocator, which this
+# device doesn't have, and then uses the HIDL one.
+dontaudit hal_camera_default default_android_vndservice:service_manager find;

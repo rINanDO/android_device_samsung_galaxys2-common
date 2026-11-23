@@ -116,6 +116,8 @@
 /sys/power/wake_unlock						u:object_r:sysfs_wake_lock:s0
 /sys/power/wakeup_count						u:object_r:sysfs_power:s0
 /sys/power/state						u:object_r:sysfs_power:s0
+# genfscon doesn't label sysfs on this kernel; ueventd's restorecon does
+/sys/kernel/wakeup_reasons(/.*)?				u:object_r:sysfs_wakeup_reasons:s0
 
 # LiveDisplay HAL
 /(vendor|system/vendor)/bin/hw/vendor\.lineage\.livedisplay-service\.samsung-exynos    u:object_r:hal_lineage_livedisplay_exynos_exec:s0

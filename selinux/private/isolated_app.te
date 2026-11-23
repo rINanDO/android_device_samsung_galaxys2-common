@@ -1,0 +1,3 @@
+# WebView's renderer asks for the content capture service, which only
+# isolated compute apps may use; it works without it.
+dontaudit isolated_app content_capture_service:service_manager find;

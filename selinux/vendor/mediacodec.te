@@ -1,3 +1,7 @@
 allow mediacodec system_file:dir { open read };
 allow mediacodec mfc_device:chr_file { read write open ioctl};
 allow mediacodec video_device:chr_file { read write open ioctl };
+
+# libui probes vndservicemanager for an AIDL graphics allocator, which this
+# device doesn't have, and then uses the HIDL one.
+dontaudit mediacodec default_android_vndservice:service_manager find;
