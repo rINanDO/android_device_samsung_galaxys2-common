@@ -1,0 +1,6 @@
+# After a developer option changes, Settings pokes every registered service
+# to reload system properties; these don't need it.
+dontaudit system_app {
+  storaged
+  system_suspend
+}:binder call;

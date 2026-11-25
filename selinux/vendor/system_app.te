@@ -11,3 +11,10 @@ allow system_app installd:binder call;
 allow system_app netd:binder call;
 allow system_app vold:binder call;
 allow system_app hal_light_default:binder call;
+
+# After a developer option changes, Settings pokes every registered service
+# to reload system properties; these don't need it.
+dontaudit system_app {
+  hal_vibrator_default
+  hal_wifi_supplicant_default
+}:binder call;
