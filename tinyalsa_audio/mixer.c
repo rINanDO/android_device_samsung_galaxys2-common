@@ -153,7 +153,7 @@ void tinyalsa_mixer_device_free(struct tinyalsa_mixer_device *mixer_device)
 		list_prev = list_data;
 		list_data = list_data->next;
 
-		list_head_free(list_prev);
+		free(list_prev);
 	}
 
 	list_data = mixer_device->disable;
@@ -167,7 +167,7 @@ void tinyalsa_mixer_device_free(struct tinyalsa_mixer_device *mixer_device)
 		list_prev = list_data;
 		list_data = list_data->next;
 
-		list_head_free(list_prev);
+		free(list_prev);
 	}
 
 	mixer_device->enable = NULL;
@@ -225,7 +225,7 @@ void tinyalsa_mixer_io_free_devices(struct tinyalsa_mixer_io *mixer_io)
 		list_prev = list_device;
 		list_device = list_device->next;
 
-		list_head_free(list_prev);
+		free(list_prev);
 	}
 }
 
