@@ -9,6 +9,10 @@
 # slot. The KERNEL partition is never written, so a bad result can always be
 # undone by flashing the uninstaller.
 #
+# The zip holds only this script and works with any Magisk release: it installs
+# the newest Magisk*.apk in the zip's folder (by MAGISK_VER_CODE), so a new
+# Magisk only needs its APK downloaded next to the zip, without a PC.
+#
 # A zip whose name contains "uninstall" clears the slot and removes Magisk.
 
 OUTFD=$2
@@ -68,10 +72,67 @@ rm -rf $WORK
 mkdir -p $WORK/fake $WORK/out
 cd $WORK || abort "! Unable to create $WORK"
 
+# Magisk comes from the newest Magisk*.apk next to this zip; a sideloaded zip
+# has no folder, so then the usual download folders are searched.
+apk_version() {
+    unzip -p "$1" assets/util_functions.sh 2>/dev/null \
+        | sed -n 's/^MAGISK_VER_CODE=\([0-9][0-9]*\).*/\1/p' | head -n 1
+}
+find_apk() {
+    local dir f code best= bestcode=0
+    for dir in "$@"; do
+        [ -d "$dir" ] || continue
+        for f in "$dir"/*; do
+            case "${f##*/}" in [Mm][Aa][Gg][Ii][Ss][Kk]*.[Aa][Pp][Kk]) ;; *) continue ;; esac
+            [ -f "$f" ] || continue
+            code=$(apk_version "$f")
+            [ -n "$code" ] || { ui_print "  (skipping ${f##*/}: not a Magisk release)"; continue; }
+            if [ "$code" -gt "$bestcode" ]; then
+                best=$f
+                bestcode=$code
+            fi
+        done
+        [ -n "$best" ] && break
+    done
+    echo "$best"
+}
+
+ZIPDIR=${ZIPFILE%/*}
+ui_print "- Looking for Magisk*.apk in $ZIPDIR"
+SRCAPK=$(find_apk "$ZIPDIR")
+if [ -z "$SRCAPK" ]; then
+    SRCAPK=$(find_apk /sdcard1/ROMS/Magisk /sdcard/ROMS /sdcard/Download \
+        /data/media/0/ROMS /data/media/0/Download)
+fi
+[ -n "$SRCAPK" ] || abort "! No Magisk*.apk found next to the zip"
+ui_print "- Using ${SRCAPK##*/} (version code $(apk_version "$SRCAPK"))"
+
 ui_print "- Extracting Magisk"
-unzip -o "$ZIPFILE" Magisk.apk boot-template.img -d $WORK >&2 \
-    || abort "! Unable to extract the zip"
 APK=$WORK/Magisk.apk
+cp -f "$SRCAPK" $APK || abort "! Unable to copy ${SRCAPK##*/}"
+
+# A minimal v0 boot image (1-byte kernel, empty cpio ramdisk), the same as
+# mkbootimg --pagesize 2048 --header_version 0 makes. It is only a container:
+# its ramdisk is replaced with the stock ramdisk before Magisk patches it.
+le32() {
+    printf "\\$(printf %03o $(( $1 & 255 )))\\$(printf %03o $(( ($1 >> 8) & 255 )))"
+    printf "\\$(printf %03o $(( ($1 >> 16) & 255 )))\\$(printf %03o $(( ($1 >> 24) & 255 )))"
+}
+zeros() {
+    dd if=/dev/zero bs=$1 count=1 2>/dev/null
+}
+{
+    printf 'ANDROID!'
+    le32 1;          le32 0x10008000     # kernel size, address
+    le32 6;          le32 0x11000000     # ramdisk size, address
+    le32 0;          le32 0              # second size, address
+    le32 0x10000100; le32 2048           # tags address, page size
+    le32 0;          le32 0              # header version, OS version
+    zeros $(( 2048 - 48 ))
+    printf 'K';      zeros 2047
+    printf '070701'; zeros 2042
+} > $WORK/boot-template.img
+[ "$(wc -c < $WORK/boot-template.img)" -eq 6144 ] || abort "! Unable to build the boot image template"
 
 # Same preparation as Magisk's own update-binary
 export TMPDIR=/dev/tmp
@@ -149,6 +210,16 @@ find_preinit_device() {
 export PREINITDEVICE=$(find_preinit_device)
 [ -n "$PREINITDEVICE" ] || abort "! Unable to find a pre-init partition (mount /data or /cache)"
 ui_print "- Pre-init partition: $PREINITDEVICE"
+
+# Magisk mounts /system through the fstab or else a partition named "system".
+# TWRP 3.6 lists this ROM's system partition as /system_root, and the S2 names
+# it FACTORYFS, so give Magisk the name it looks for ("! Cannot mount /system").
+if ! grep -q "[[:space:]]/system[[:space:]]" /etc/fstab 2>/dev/null \
+    && [ ! -e /dev/block/by-name/system ]; then
+    mkdir -p /dev/block/by-name
+    ln -s /dev/block/mmcblk0p9 /dev/block/by-name/system \
+        || abort "! Unable to link the system partition"
+fi
 
 ASH_STANDALONE=1 $BBBIN sh $WORK/updater-script "$1" "$OUTFD" "$APK" \
     || abort "! Magisk failed to patch the ramdisk"
